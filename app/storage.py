@@ -4,6 +4,12 @@ from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+@dataclass(frozen=True)
+class StoredChunk:
+    document_id: str
+    filename: str
+    index: int
+    text: str
 
 @dataclass
 class StoredDocument:
@@ -98,3 +104,30 @@ class DocumentStore:
             ).fetchall()
 
         return StoredDocument(document_id, row[0], [chunk[0] for chunk in chunks])
+
+    def list_chunks(self, document_id: str | None = None) -> list[StoredChunk]:
+        query = """
+            SELECT c.document_id, d.filename, c.chunk_index, c.text
+            FROM chunks AS c
+            JOIN documents AS d ON d.document_id = c.document_id
+        """
+        parameters: tuple[str, ...] = ()
+
+        if document_id is not None:
+            query += " WHERE c.document_id = ?"
+            parameters = (document_id,)
+
+        query += " ORDER BY c.document_id, c.chunk_index"
+
+        with self._connect() as connection:
+            rows = connection.execute(query, parameters).fetchall()
+
+        return [
+            StoredChunk(
+                document_id=row[0],
+                filename=row[1],
+                index=row[2],
+                text=row[3],
+            )
+            for row in rows
+        ]

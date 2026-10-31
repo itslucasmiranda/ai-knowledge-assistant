@@ -20,6 +20,7 @@ Construir uma API em Python para perguntas sobre documentos usando Retrieval-Aug
 - Validação de entradas vazias e do limite de tokens antes da geração de embeddings.
 - Testes automatizados de saúde, ingestão, segmentação, armazenamento e embeddings.
 - Workflow de testes no GitHub Actions.
+- Leitura de trechos persistidos com metadados de origem e filtro por documento.
 
 ## Tecnologias
 
