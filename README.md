@@ -39,6 +39,42 @@ Python, FastAPI, pytest, Docker, GitHub Actions e componentes de RAG a seleciona
 - Identificação do documento pelo SHA-256 dos bytes enviados.
 - Testes automatizados de saúde, segmentação e ingestão.
 - Workflow de testes no GitHub Actions.
+- Persistência de documentos e trechos em SQLite.
+- Consulta de documentos pelo identificador.
+- Módulo de embeddings com o modelo multilingual-e5-small, executado em CPU.
+- Validação de entradas vazias e do limite de tokens antes da geração de embeddings.
+
+## Ambiente
+
+Python 3.12 ou superior. O armazenamento utiliza a opção `autocommit`
+do módulo SQLite, disponível a partir do Python 3.12.
+
+Para executar os embeddings em CPU, instale o PyTorch no ambiente
+virtual antes de instalar o `requirements.txt`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+## Embeddings
+
+O módulo `app/embeddings.py` utiliza o modelo pré-treinado
+[intfloat/multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small).
+
+- `embed_query` representa perguntas com o prefixo `query:`.
+- `embed_passages` representa trechos com o prefixo `passage:`.
+- Os vetores são normalizados e possuem 384 dimensões.
+- Entradas acima do limite do modelo são rejeitadas para evitar truncamento silencioso.
+- O modelo é carregado sob demanda e reutilizado nas chamadas seguintes do processo.
+- A primeira execução precisa baixar os arquivos do modelo.
+
+Os testes automatizados do módulo usam um modelo simulado e não
+dependem de downloads. Eles verificam validação, prefixos, ordem dos
+trechos e limites de tokens. A qualidade da recuperação semântica
+ainda precisa de uma avaliação própria.
+
+Os documentos ficam em `data/documents.sqlite3`. Os arquivos locais
+do banco são excluídos do versionamento pelo `.gitignore`.
 
 ## Executar localmente no Windows
 
@@ -68,7 +104,8 @@ Acesse a documentação interativa em http://127.0.0.1:8000/docs.
 | Método | Rota | Função |
 |---|---|---|
 | GET | `/health` | Retorna `{"status": "ok"}`. |
-| POST | `/documents` | Recebe um arquivo e retorna seus trechos. |
+| POST | `/documents` | Recebe, segmenta e persiste um documento. |
+| GET | `/documents/{document_id}` | Consulta um documento persistido; retorna 404 se não existir. |
 
 ### Enviar um documento
 
@@ -96,16 +133,11 @@ A resposta contém:
 
 ## Limitações atuais
 
-Os documentos são processados e devolvidos na resposta, sem persistência
-para consultas posteriores. Ainda não há embeddings, busca semântica
-ou integração com modelos de linguagem.
-
-A segmentação considera palavras, não tokens, e normaliza espaços e
-quebras de linha. Os valores de tamanho e sobreposição ainda precisam
-ser avaliados com documentos representativos.
-
-O projeto está preparado para desenvolvimento local. Autenticação e
-controles de implantação pública ainda não foram implementados.
+Os documentos e seus trechos são persistidos em SQLite. O módulo de
+embeddings está implementado e foi exercitado localmente com o modelo
+real, mas ainda não está conectado aos endpoints nem ao armazenamento.
+Ainda não há indexação vetorial, endpoint de busca semântica ou geração
+de respostas com LLM.
 
 ## Autor
 [Lucas Miranda](https://github.com/itslucasmiranda)
