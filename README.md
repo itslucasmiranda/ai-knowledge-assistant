@@ -1,6 +1,6 @@
 # AI Knowledge Assistant
 
-> **Status: em desenvolvimento.** API para ingestão, segmentação e armazenamento de documentos, com módulo de embeddings local. A integração da busca semântica e a geração de respostas com RAG ainda estão em implementação.
+> **Status: em desenvolvimento.** API para ingestão, segmentação e armazenamento de documentos, com busca semântica disponível como módulo Python. O endpoint HTTP de busca e a geração de respostas com RAG ainda estão em implementação.
 
 ## Objetivo
 
@@ -16,11 +16,14 @@ Construir uma API em Python para perguntas sobre documentos usando Retrieval-Aug
 - Persistência de documentos e trechos em SQLite.
 - Consulta de documentos pelo identificador.
 - Preservação do registro original ao reenviar conteúdo idêntico.
-- Módulo de embeddings com `intfloat/multilingual-e5-small`, executado em CPU.
+- Leitura de trechos com metadados de origem e filtro por documento.
+- Geração de embeddings com `intfloat/multilingual-e5-small`, executado em CPU.
 - Validação de entradas vazias e do limite de tokens antes da geração de embeddings.
-- Testes automatizados de saúde, ingestão, segmentação, armazenamento e embeddings.
-- Workflow de testes no GitHub Actions.
-- Leitura de trechos persistidos com metadados de origem e filtro por documento.
+- Busca semântica nos trechos persistidos, com ordenação por similaridade.
+- Retorno do texto, documento, arquivo de origem, posição do trecho e pontuação.
+- Limitação da quantidade de resultados com `top_k`.
+- Demonstração com modelo real e banco temporário.
+- Testes automatizados e workflow no GitHub Actions.
 
 ## Tecnologias
 
@@ -32,10 +35,11 @@ Construir uma API em Python para perguntas sobre documentos usando Retrieval-Aug
 | Persistência | SQLite |
 | Embeddings | Sentence Transformers e PyTorch |
 | Modelo pré-treinado | intfloat/multilingual-e5-small |
+| Recuperação | Similaridade de cosseno sobre embeddings normalizados |
 | Testes | pytest |
 | Integração contínua | GitHub Actions |
 
-Docker, indexação vetorial e integração com um modelo de linguagem fazem parte das próximas etapas.
+Docker, índice vetorial persistente e integração com um modelo de linguagem fazem parte das próximas etapas.
 
 ## Organização do código
 
@@ -43,12 +47,16 @@ Docker, indexação vetorial e integração com um modelo de linguagem fazem par
 |---|---|
 | `app/main.py` | Endpoints, validação do upload e modelos de resposta |
 | `app/chunking.py` | Segmentação de texto com sobreposição |
-| `app/storage.py` | Persistência e consulta de documentos no SQLite |
+| `app/storage.py` | Persistência, consulta de documentos e leitura de trechos |
 | `app/embeddings.py` | Geração de embeddings para perguntas e trechos |
+| `app/retrieval.py` | Busca semântica com pontuação e metadados de origem |
+| `scripts/demo_search.py` | Demonstração com modelo real e banco temporário |
 | `tests/` | Testes automatizados e isolamento do banco |
 | `.github/workflows/tests.yml` | Execução dos testes no GitHub Actions |
 
-O fluxo atual da API recebe o documento, valida o conteúdo, gera os trechos e persiste os dados no SQLite. O módulo de embeddings pode ser executado separadamente, mas ainda não participa desse fluxo.
+O fluxo atual da API recebe o documento, valida o conteúdo, gera os trechos e persiste os dados no SQLite.
+
+O módulo de recuperação lê os trechos armazenados, gera embeddings e ordena os resultados por similaridade com a pergunta. A busca ainda não possui endpoint HTTP.
 
 ## Roadmap
 
@@ -56,13 +64,16 @@ O fluxo atual da API recebe o documento, valida o conteúdo, gera os trechos e p
 - [x] Ingestão de documentos e segmentação de texto
 - [x] Persistência em SQLite e consulta por identificador
 - [x] Módulo de embeddings local com validação de entradas
+- [x] Integração dos embeddings com a leitura dos trechos persistidos
+- [x] Busca semântica local com pontuação e metadados de origem
+- [x] Demonstração da busca com modelo real
 - [x] Testes automatizados e workflow no GitHub Actions
-- [ ] Integração dos embeddings com os trechos persistidos
-- [ ] Indexação vetorial e busca semântica
+- [ ] Endpoint HTTP de busca semântica
+- [ ] Índice vetorial persistente
 - [ ] Endpoint de perguntas com respostas e fontes
 - [ ] Avaliação reproduzível da recuperação e das respostas
 - [ ] Observabilidade de latência, erros e custos
-- [ ] Docker e demonstração da aplicação
+- [ ] Docker e demonstração da aplicação completa
 
 ## Requisitos
 
@@ -74,7 +85,9 @@ O armazenamento utiliza a opção `autocommit` do módulo SQLite, disponível a 
 
 ## Executar localmente no Windows
 
-Na pasta do projeto, crie o ambiente virtual:
+Execute os comandos na pasta do projeto, onde estão `requirements.txt`, `app` e `tests`.
+
+Crie o ambiente virtual:
 
 ```powershell
 py -m venv .venv
@@ -107,7 +120,7 @@ Mantenha o terminal aberto enquanto utiliza a API. Para encerrar o servidor, pre
 
 Os comandos usam diretamente o Python do ambiente virtual, sem exigir sua ativação no PowerShell.
 
-## Endpoints
+## Endpoints disponíveis
 
 | Método | Rota | Função |
 |---|---|---|
@@ -199,6 +212,64 @@ Dimensoes do trecho: 384
 
 A primeira execução baixa os arquivos do modelo. Essa verificação confirma o carregamento e as dimensões dos vetores; ela não substitui uma avaliação da qualidade da busca.
 
+## Busca semântica
+
+A função `search_documents`, em `app/retrieval.py`, realiza a recuperação dos trechos:
+
+1. Valida a pergunta e o parâmetro `top_k`.
+2. Lê os trechos do SQLite, com filtro opcional por documento.
+3. Gera os embeddings da pergunta e dos trechos.
+4. Calcula a similaridade usando o produto escalar dos vetores normalizados, equivalente à similaridade de cosseno.
+5. Ordena os resultados por pontuação e retorna até `top_k` trechos.
+
+Em caso de empate, os resultados são ordenados pelo identificador do documento e pela posição do trecho.
+
+### Parâmetros
+
+| Parâmetro | Descrição |
+|---|---|
+| `store` | Instância de `DocumentStore` |
+| `query` | Pergunta ou texto de consulta; não pode estar vazio |
+| `top_k` | Quantidade máxima de resultados, entre 1 e 20; padrão: 3 |
+| `document_id` | Filtro opcional para pesquisar em um único documento |
+
+Se não houver trechos correspondentes ao filtro, a função retorna uma lista vazia.
+
+### Resultado
+
+Cada resultado contém:
+
+| Campo | Conteúdo |
+|---|---|
+| `document_id` | Identificador do documento de origem |
+| `filename` | Nome do arquivo de origem |
+| `chunk_index` | Posição do trecho, começando em zero |
+| `text` | Conteúdo do trecho |
+| `score` | Similaridade com a consulta |
+
+A recuperação devolve trechos existentes. Ela ainda não gera uma resposta em linguagem natural.
+
+## Demonstração da busca semântica
+
+Execute na pasta do projeto:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.demo_search
+```
+
+Não é necessário iniciar a API para executar essa demonstração.
+
+O script cria três documentos sintéticos em um banco SQLite temporário, executa duas consultas com o modelo real e exibe os resultados ordenados. Os documentos da aplicação não são alterados.
+
+| Pergunta | Primeiro resultado esperado |
+|---|---|
+| Onde ficam salvos os documentos? | `armazenamento.txt` |
+| Como recuperar o acesso se eu esquecer minha senha? | `acesso.txt` |
+
+Na verificação manual inicial, os dois documentos esperados apareceram em primeiro lugar.
+
+Essa demonstração verifica a integração entre armazenamento, embeddings e recuperação. Não substitui uma avaliação com um conjunto maior de perguntas e documentos. As pontuações podem variar entre ambientes e versões.
+
 ## Executar os testes
 
 ```powershell
@@ -211,22 +282,33 @@ A suíte cobre:
 - Validações do upload e limites de tamanho.
 - Segmentação e sobreposição de trechos.
 - Persistência, duplicidade e consulta de documentos.
+- Leitura de trechos com ordenação e metadados de origem.
+- Filtro por documento e tratamento de identificadores como parâmetros SQL.
 - Isolamento do armazenamento durante os testes.
-- Entradas vazias, prefixos, ordem dos trechos e limites de tokens dos embeddings.
+- Entradas vazias, prefixos e limites de tokens dos embeddings.
+- Ordenação dos resultados da busca e preservação das fontes.
+- Limite de resultados com `top_k`.
+- Banco vazio e propagação de erros da geração de embeddings.
 
-Os testes do módulo de embeddings usam um modelo simulado. Após instalar as dependências, esses testes não precisam baixar os pesos do modelo nem executar inferência real.
+Os testes de embeddings e recuperação utilizam modelos ou funções de codificação simulados. Após instalar as dependências, a suíte não precisa baixar os pesos do modelo nem executar inferência real.
+
+A demonstração em `scripts/demo_search.py` exercita separadamente o modelo real.
 
 O workflow do GitHub Actions executa os testes em pushes e pull requests.
 
 ## Limitações atuais
 
-Os embeddings ainda não estão conectados aos endpoints nem ao armazenamento. Ainda não há indexação vetorial, endpoint de busca semântica ou geração de respostas com LLM.
+A busca semântica está disponível como módulo Python, sem endpoint HTTP. Ainda não há geração de respostas com LLM.
 
-A segmentação considera palavras, não tokens, e normaliza espaços e quebras de linha. Um trecho de 100 palavras ainda pode ultrapassar o limite de tokens do modelo; nesse caso, o módulo de embeddings rejeita a entrada. O tratamento desse caso na ingestão ainda está pendente.
+Os embeddings dos trechos são recalculados a cada consulta. O modelo permanece em cache no processo, mas os vetores dos documentos ainda não são persistidos. A implementação lê e compara todos os trechos selecionados, sendo destinada inicialmente a pequenos conjuntos de documentos.
+
+A busca retorna os primeiros resultados por similaridade, sem um limiar mínimo de relevância. Portanto, pode retornar trechos sem relação suficiente com a pergunta. Pontuações de similaridade não representam probabilidades de uma resposta estar correta.
+
+A segmentação considera palavras, não tokens, e normaliza espaços e quebras de linha. Um trecho de 100 palavras ainda pode ultrapassar o limite de tokens do modelo. Nesse caso, o módulo de embeddings rejeita a entrada e a busca propaga o erro. O tratamento desse caso na ingestão ainda está pendente.
 
 O limite de 1 MiB é verificado no endpoint após o processamento multipart. Controles de recebimento para implantação pública ainda não foram implementados.
 
-A qualidade da recuperação semântica ainda precisa ser avaliada com um conjunto reproduzível de documentos e perguntas. Pontuações de similaridade não representam probabilidades de uma resposta estar correta.
+A qualidade da recuperação semântica ainda precisa ser avaliada com um conjunto reproduzível e mais abrangente de documentos e perguntas.
 
 O projeto está preparado para desenvolvimento local. Autenticação e controles de implantação pública ainda não foram implementados.
 
