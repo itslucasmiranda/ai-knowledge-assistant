@@ -3,10 +3,13 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.chunking import chunk_text
 from app.storage import DocumentStore, StoredDocument
+
+from app.embeddings import EmbeddingInputError
+from app.retrieval import SearchResult, search_documents
 
 app = FastAPI(title="AI Knowledge Assistant", version="0.1.0")
 
@@ -119,3 +122,43 @@ def read_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     return document_response(document)
+
+class SearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    query: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=2000),
+    ]
+    top_k: Annotated[int, Field(strict=True, ge=1, le=20)] = 3
+    document_id: Annotated[
+        str, Field(pattern=r"^[0-9a-f]{64}$")
+    ] | None = None
+
+
+class SearchResponse(BaseModel):
+    query: str
+    result_count: int
+    results: list[SearchResult]
+
+
+@app.post("/search", response_model=SearchResponse)
+def search(
+    request: SearchRequest,
+    store: Annotated[DocumentStore, Depends(get_store)],
+) -> SearchResponse:
+    try:
+        results = search_documents(
+            store=store,
+            query=request.query,
+            top_k=request.top_k,
+            document_id=request.document_id,
+        )
+    except EmbeddingInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return SearchResponse(
+        query=request.query,
+        result_count=len(results),
+        results=results,
+    )

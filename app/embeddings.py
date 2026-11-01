@@ -6,6 +6,8 @@ if TYPE_CHECKING:
 
 MODEL_NAME = "intfloat/multilingual-e5-small"
 
+class EmbeddingInputError(ValueError):
+    pass
 
 @lru_cache(maxsize=1)
 def get_model() -> "SentenceTransformer":
@@ -18,7 +20,7 @@ def _encode(texts: list[str], prefix: str) -> list[list[float]]:
     if not texts:
         return []
     if any(not text.strip() for text in texts):
-        raise ValueError("Text must not be empty")
+        raise EmbeddingInputError("Text must not be empty")
 
     model = get_model()
     inputs = [f"{prefix}: {text.strip()}" for text in texts]
@@ -29,7 +31,7 @@ def _encode(texts: list[str], prefix: str) -> list[list[float]]:
             text, add_special_tokens=True, truncation=False
         )["input_ids"]
         if len(tokens) > limit:
-            raise ValueError(f"Text exceeds the model limit of {limit} tokens")
+            raise EmbeddingInputError(f"Text exceeds the model limit of {limit} tokens")
 
     vectors = model.encode(
         inputs,
