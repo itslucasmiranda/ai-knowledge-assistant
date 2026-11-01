@@ -1,13 +1,20 @@
 from hashlib import sha256
+from pathlib import Path
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, UploadFile
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI, HTTPException, UploadFile
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.chunking import chunk_text
+from app.storage import DocumentStore, StoredDocument
+
+from app.embeddings import EmbeddingInputError
+from app.retrieval import SearchResult, search_documents
 
 app = FastAPI(title="AI Knowledge Assistant", version="0.1.0")
 
 MAX_FILE_SIZE = 1024 * 1024
+DB_PATH = Path(__file__).resolve().parent.parent / "data" / "documents.sqlite3"
 
 
 class DocumentChunk(BaseModel):
@@ -22,13 +29,32 @@ class DocumentResponse(BaseModel):
     chunks: list[DocumentChunk]
 
 
+def get_store() -> DocumentStore:
+    return DocumentStore(DB_PATH)
+
+
+def document_response(document: StoredDocument) -> DocumentResponse:
+    return DocumentResponse(
+        document_id=document.document_id,
+        filename=document.filename,
+        chunk_count=len(document.chunks),
+        chunks=[
+            DocumentChunk(index=index, text=text)
+            for index, text in enumerate(document.chunks)
+        ],
+    )
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.post("/documents", response_model=DocumentResponse)
-async def ingest_document(file: UploadFile) -> DocumentResponse:
+def ingest_document(
+    file: UploadFile,
+    store: Annotated[DocumentStore, Depends(get_store)],
+) -> DocumentResponse:
     try:
         filename = file.filename or ""
 
@@ -38,7 +64,7 @@ async def ingest_document(file: UploadFile) -> DocumentResponse:
                 detail="Only .txt files are supported",
             )
 
-        content = await file.read(MAX_FILE_SIZE + 1)
+        content = file.file.read(MAX_FILE_SIZE + 1)
 
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(
@@ -66,16 +92,73 @@ async def ingest_document(file: UploadFile) -> DocumentResponse:
                 detail="File must not contain null characters",
             )
 
-        chunks = [
-            DocumentChunk(index=index, text=chunk)
-            for index, chunk in enumerate(chunk_text(text))
-        ]
-
-        return DocumentResponse(
+        document = StoredDocument(
             document_id=sha256(content).hexdigest(),
             filename=filename,
-            chunk_count=len(chunks),
-            chunks=chunks,
+            chunks=chunk_text(text),
         )
+        store.save(document)
+        stored_document = store.get(document.document_id)
+
+        if stored_document is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Document could not be loaded after saving",
+            )
+
+        return document_response(stored_document)
     finally:
-        await file.close()
+        file.file.close()
+
+
+@app.get("/documents/{document_id}", response_model=DocumentResponse)
+def read_document(
+    document_id: str,
+    store: Annotated[DocumentStore, Depends(get_store)],
+) -> DocumentResponse:
+    document = store.get(document_id)
+
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return document_response(document)
+
+class SearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    query: Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=1, max_length=2000),
+    ]
+    top_k: Annotated[int, Field(strict=True, ge=1, le=20)] = 3
+    document_id: Annotated[
+        str, Field(pattern=r"^[0-9a-f]{64}$")
+    ] | None = None
+
+
+class SearchResponse(BaseModel):
+    query: str
+    result_count: int
+    results: list[SearchResult]
+
+
+@app.post("/search", response_model=SearchResponse)
+def search(
+    request: SearchRequest,
+    store: Annotated[DocumentStore, Depends(get_store)],
+) -> SearchResponse:
+    try:
+        results = search_documents(
+            store=store,
+            query=request.query,
+            top_k=request.top_k,
+            document_id=request.document_id,
+        )
+    except EmbeddingInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return SearchResponse(
+        query=request.query,
+        result_count=len(results),
+        results=results,
+    )
