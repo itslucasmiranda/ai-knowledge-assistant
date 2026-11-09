@@ -1,0 +1,98 @@
+{
+  "name": "retrieval_pt_br_v1",
+  "description": "Conjunto sintético inicial para avaliação de recuperação por documento. Não representa um benchmark de produção.",
+  "documents": [
+    {
+      "id": "storage",
+      "filename": "armazenamento.txt",
+      "text": "Os documentos enviados e seus trechos ficam armazenados no banco SQLite localizado em data/documents.sqlite3. Os registros permanecem disponíveis depois de reiniciar a API, desde que o arquivo do banco seja preservado."
+    },
+    {
+      "id": "upload",
+      "filename": "envio.txt",
+      "text": "Para enviar um documento, abra POST /documents na documentação interativa, clique em Try it out, selecione o arquivo no campo file e pressione Execute. A requisição utiliza multipart/form-data. Apenas selecionar o arquivo não realiza o envio."
+    },
+    {
+      "id": "formats",
+      "filename": "formatos.txt",
+      "text": "O upload aceita arquivos com extensão .txt e conteúdo codificado em UTF-8, com ou sem BOM. PDF e DOCX não são aceitos. Extensões não suportadas recebem HTTP 415. Conteúdo com codificação inválida recebe HTTP 400."
+    },
+    {
+      "id": "size",
+      "filename": "tamanho.txt",
+      "text": "O tamanho máximo permitido por arquivo é de 1 MiB, equivalente a 1.048.576 bytes. Um arquivo que ultrapassa esse tamanho é rejeitado com HTTP 413. Esse limite se refere ao tamanho do arquivo enviado."
+    },
+    {
+      "id": "lookup",
+      "filename": "consulta.txt",
+      "text": "Para consultar um documento já enviado, use GET /documents/{document_id}. Copie o identificador retornado pelo upload. A resposta apresenta o nome do arquivo e seus trechos. Se esse identificador não existir no banco, a consulta retorna HTTP 404."
+    },
+    {
+      "id": "search",
+      "filename": "busca.txt",
+      "text": "POST /search recebe uma pergunta no campo query e recupera trechos por similaridade semântica. O parâmetro top_k limita a quantidade de resultados, aceita inteiros entre 1 e 20 e tem padrão 3. O campo document_id permite restringir a busca a um documento."
+    }
+  ],
+  "queries": [
+    {
+      "id": "q01",
+      "query": "Em qual banco os textos enviados ficam guardados?",
+      "relevant_document_ids": ["storage"]
+    },
+    {
+      "id": "q02",
+      "query": "Se eu reiniciar a API, os documentos continuam disponíveis?",
+      "relevant_document_ids": ["storage"]
+    },
+    {
+      "id": "q03",
+      "query": "Como faço o envio de um documento pelo Swagger?",
+      "relevant_document_ids": ["upload"]
+    },
+    {
+      "id": "q04",
+      "query": "Escolhi o arquivo no formulário. O que falta clicar para enviá-lo?",
+      "relevant_document_ids": ["upload"]
+    },
+    {
+      "id": "q05",
+      "query": "Posso enviar um documento em PDF?",
+      "relevant_document_ids": ["formats"]
+    },
+    {
+      "id": "q06",
+      "query": "Qual codificação o arquivo de texto precisa usar?",
+      "relevant_document_ids": ["formats"]
+    },
+    {
+      "id": "q07",
+      "query": "Quantos bytes um arquivo pode ter no máximo?",
+      "relevant_document_ids": ["size"]
+    },
+    {
+      "id": "q08",
+      "query": "O upload retornou erro 413. O que isso significa?",
+      "relevant_document_ids": ["size"]
+    },
+    {
+      "id": "q09",
+      "query": "Já tenho o identificador. Como consulto o documento original?",
+      "relevant_document_ids": ["lookup"]
+    },
+    {
+      "id": "q10",
+      "query": "Qual resposta recebo ao consultar um documento inexistente pelo ID?",
+      "relevant_document_ids": ["lookup"]
+    },
+    {
+      "id": "q11",
+      "query": "Como escolho a quantidade máxima de trechos retornados na pesquisa?",
+      "relevant_document_ids": ["search"]
+    },
+    {
+      "id": "q12",
+      "query": "Como restrinjo uma pesquisa semântica a apenas um documento?",
+      "relevant_document_ids": ["search"]
+    }
+  ]
+}

@@ -72,7 +72,8 @@ O modelo é reutilizado dentro do processo. Os embeddings dos documentos ainda s
 - [x] Endpoint HTTP de busca semântica
 - [x] Demonstração com modelo real
 - [x] Testes automatizados e workflow no GitHub Actions
-- [ ] Avaliação reproduzível da recuperação
+- [x] Avaliação inicial da recuperação com conjunto sintético
+- [ ] Ampliar a avaliação com conjunto independente e perguntas sem resposta
 - [ ] Persistência de embeddings e indexação vetorial
 - [ ] Endpoint de perguntas com respostas geradas e fontes
 - [ ] Avaliação de fidelidade das respostas
@@ -334,7 +335,7 @@ Execute:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-A execução local registrada nesta etapa apresentou **70 testes aprovados**.
+A execução local registrada nesta etapa apresentou **79 testes aprovados**.
 
 A suíte verifica:
 
@@ -358,6 +359,15 @@ A demonstração e o teste manual pela API exercitam separadamente o modelo real
 
 O GitHub Actions executa a suíte em pushes e pull requests.
 
+## Avaliação inicial da recuperação
+
+A avaliação com 6 documentos sintéticos e 12 perguntas apresentou
+Hit@1 de 83,33%, Hit@3 de 100% e MRR@3 de 0,9028.
+
+Esses resultados descrevem somente esse conjunto inicial.
+A metodologia, os erros de ordenação e as limitações estão em
+[evals/README.md](evals/README.md).
+
 ## Limitações atuais
 
 - Ainda não há geração de respostas com LLM.
@@ -372,7 +382,7 @@ O GitHub Actions executa a suíte em pushes e pull requests.
 - O limite de 1 MiB é verificado no endpoint após o processamento multipart.
 - Autenticação, limites de requisições e controles para implantação pública ainda não foram implementados.
 
-O projeto está em desenvolvimento para execução local e evolução incremental.
+- A avaliação inicial utiliza um conjunto sintético pequeno. Ainda é necessário ampliar os dados e avaliar em um conjunto independente, incluindo perguntas sem resposta.
 
 ## Princípios
 

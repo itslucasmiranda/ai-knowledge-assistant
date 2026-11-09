@@ -1,0 +1,383 @@
+{
+  "dataset": "retrieval_pt_br_v1",
+  "dataset_sha256": "23286021154442c618491d394949a8d5b8b3489dc88b5e8cef9619aec64df69d",
+  "created_at": "2026-11-01T03:07:23.504033+00:00",
+  "model": "intfloat/multilingual-e5-small",
+  "device": "cpu",
+  "python": "3.14.7",
+  "packages": {
+    "sentence-transformers": "6.2.0",
+    "transformers": "5.22.1",
+    "torch": "2.15.0+cpu"
+  },
+  "document_count": 6,
+  "query_count": 12,
+  "top_k": 3,
+  "metrics": {
+    "hit_at_1": 0.8333333333333334,
+    "hit_at_3": 1.0,
+    "mrr_at_3": 0.9027777777777778
+  },
+  "queries": [
+    {
+      "id": "q01",
+      "query": "Em qual banco os textos enviados ficam guardados?",
+      "relevant_document_ids": [
+        "storage"
+      ],
+      "results": [
+        {
+          "id": "storage",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "score": 0.8760819119266333
+        },
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8345623801177211
+        },
+        {
+          "id": "upload",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "score": 0.821222692981513
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q02",
+      "query": "Se eu reiniciar a API, os documentos continuam disponíveis?",
+      "relevant_document_ids": [
+        "storage"
+      ],
+      "results": [
+        {
+          "id": "storage",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "score": 0.8935110820320493
+        },
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8590814485509539
+        },
+        {
+          "id": "upload",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "score": 0.8477890291302865
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q03",
+      "query": "Como faço o envio de um documento pelo Swagger?",
+      "relevant_document_ids": [
+        "upload"
+      ],
+      "results": [
+        {
+          "id": "upload",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "score": 0.8694797453764747
+        },
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8436455449364896
+        },
+        {
+          "id": "storage",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "score": 0.8364367846516251
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q04",
+      "query": "Escolhi o arquivo no formulário. O que falta clicar para enviá-lo?",
+      "relevant_document_ids": [
+        "upload"
+      ],
+      "results": [
+        {
+          "id": "upload",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "score": 0.8869971612590062
+        },
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.861855422546641
+        },
+        {
+          "id": "storage",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "score": 0.8379813249446825
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q05",
+      "query": "Posso enviar um documento em PDF?",
+      "relevant_document_ids": [
+        "formats"
+      ],
+      "results": [
+        {
+          "id": "upload",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "score": 0.8608090153869409
+        },
+        {
+          "id": "formats",
+          "filename": "formatos.txt",
+          "chunk_index": 0,
+          "score": 0.8502460811680023
+        },
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8485918069204558
+        }
+      ],
+      "hit_at_1": 0,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 0.5
+    },
+    {
+      "id": "q06",
+      "query": "Qual codificação o arquivo de texto precisa usar?",
+      "relevant_document_ids": [
+        "formats"
+      ],
+      "results": [
+        {
+          "id": "formats",
+          "filename": "formatos.txt",
+          "chunk_index": 0,
+          "score": 0.8682798918804391
+        },
+        {
+          "id": "upload",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "score": 0.8386357446504031
+        },
+        {
+          "id": "size",
+          "filename": "tamanho.txt",
+          "chunk_index": 0,
+          "score": 0.8373280357596923
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q07",
+      "query": "Quantos bytes um arquivo pode ter no máximo?",
+      "relevant_document_ids": [
+        "size"
+      ],
+      "results": [
+        {
+          "id": "size",
+          "filename": "tamanho.txt",
+          "chunk_index": 0,
+          "score": 0.9173637635766959
+        },
+        {
+          "id": "formats",
+          "filename": "formatos.txt",
+          "chunk_index": 0,
+          "score": 0.855925767402139
+        },
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8224298995059861
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q08",
+      "query": "O upload retornou erro 413. O que isso significa?",
+      "relevant_document_ids": [
+        "size"
+      ],
+      "results": [
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8644705558858407
+        },
+        {
+          "id": "formats",
+          "filename": "formatos.txt",
+          "chunk_index": 0,
+          "score": 0.8497153582282717
+        },
+        {
+          "id": "size",
+          "filename": "tamanho.txt",
+          "chunk_index": 0,
+          "score": 0.8463092417171715
+        }
+      ],
+      "hit_at_1": 0,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 0.3333333333333333
+    },
+    {
+      "id": "q09",
+      "query": "Já tenho o identificador. Como consulto o documento original?",
+      "relevant_document_ids": [
+        "lookup"
+      ],
+      "results": [
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8906616670284397
+        },
+        {
+          "id": "storage",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "score": 0.8325724687573346
+        },
+        {
+          "id": "upload",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "score": 0.82970634232714
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q10",
+      "query": "Qual resposta recebo ao consultar um documento inexistente pelo ID?",
+      "relevant_document_ids": [
+        "lookup"
+      ],
+      "results": [
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8860896705698689
+        },
+        {
+          "id": "search",
+          "filename": "busca.txt",
+          "chunk_index": 0,
+          "score": 0.8348853695996533
+        },
+        {
+          "id": "storage",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "score": 0.8287840366348792
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q11",
+      "query": "Como escolho a quantidade máxima de trechos retornados na pesquisa?",
+      "relevant_document_ids": [
+        "search"
+      ],
+      "results": [
+        {
+          "id": "search",
+          "filename": "busca.txt",
+          "chunk_index": 0,
+          "score": 0.8433574825494204
+        },
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8403737633025079
+        },
+        {
+          "id": "storage",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "score": 0.8231123695356733
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    },
+    {
+      "id": "q12",
+      "query": "Como restrinjo uma pesquisa semântica a apenas um documento?",
+      "relevant_document_ids": [
+        "search"
+      ],
+      "results": [
+        {
+          "id": "search",
+          "filename": "busca.txt",
+          "chunk_index": 0,
+          "score": 0.8639304916501684
+        },
+        {
+          "id": "upload",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "score": 0.8259398118329865
+        },
+        {
+          "id": "lookup",
+          "filename": "consulta.txt",
+          "chunk_index": 0,
+          "score": 0.8252826324751086
+        }
+      ],
+      "hit_at_1": 1,
+      "hit_at_3": 1,
+      "reciprocal_rank_at_3": 1.0
+    }
+  ]
+}
