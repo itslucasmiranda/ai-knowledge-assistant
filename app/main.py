@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from app.chunking import chunk_text
 from app.storage import DocumentStore, StoredDocument
 
-from app.embeddings import EmbeddingInputError
+from app.embeddings import EmbeddingInputError, split_passages
 from app.retrieval import SearchResult, search_documents
 
 app = FastAPI(title="AI Knowledge Assistant", version="0.1.0")
@@ -92,11 +92,18 @@ def ingest_document(
                 detail="File must not contain null characters",
             )
 
+        document_id = sha256(content).hexdigest()
+        existing_document = store.get(document_id)
+
+        if existing_document is not None:
+            return document_response(existing_document)
+
         document = StoredDocument(
-            document_id=sha256(content).hexdigest(),
+            document_id=document_id,
             filename=filename,
-            chunks=chunk_text(text),
+            chunks=split_passages(chunk_text(text)),
         )
+        
         store.save(document)
         stored_document = store.get(document.document_id)
 

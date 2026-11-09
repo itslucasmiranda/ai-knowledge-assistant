@@ -1,3 +1,4 @@
+from app.token_chunking import split_to_token_limit
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
@@ -50,3 +51,36 @@ def embed_query(query: str) -> list[float]:
 
 def embed_passages(passages: list[str]) -> list[list[float]]:
     return _encode(passages, "passage")
+
+def split_passages(passages: list[str]) -> list[str]:
+    if not passages:
+        return []
+
+    if any(not text.strip() for text in passages):
+        raise EmbeddingInputError("Text must not be empty")
+
+    model = get_model()
+    limit = min(512, model.max_seq_length)
+
+    def count_tokens(text: str) -> int:
+        return len(
+            model.tokenizer(
+                text,
+                add_special_tokens=True,
+                truncation=False,
+            )["input_ids"]
+        )
+
+    chunks = []
+
+    for passage in passages:
+        chunks.extend(
+            split_to_token_limit(
+                text=passage,
+                count_tokens=count_tokens,
+                max_tokens=limit,
+                prefix="passage: ",
+            )
+        )
+
+    return chunks

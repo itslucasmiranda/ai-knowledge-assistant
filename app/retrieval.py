@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from math import fsum, isfinite
 
-from app.embeddings import embed_passages, embed_query
+from app.embeddings import embed_passages, embed_query, split_passages
 from app.storage import DocumentStore
 
 
@@ -31,10 +31,20 @@ def search_documents(
         return []
 
     query_vector = embed_query(query)
-    passage_vectors = embed_passages([chunk.text for chunk in chunks])
-    results = []
+    passages = []
+    sources = []
 
-    for chunk, vector in zip(chunks, passage_vectors, strict=True):
+    for chunk in chunks:
+        parts = split_passages([chunk.text])
+        passages.extend(parts)
+        sources.extend([chunk] * len(parts))
+
+    passage_vectors = embed_passages(passages)
+    best_results: dict[tuple[str, int], SearchResult] = {}
+
+    for chunk, text, vector in zip(
+        sources, passages, passage_vectors, strict=True
+    ):
         score = fsum(
             left * right
             for left, right in zip(query_vector, vector, strict=True)
@@ -42,19 +52,24 @@ def search_documents(
         if not isfinite(score):
             raise ValueError("Embedding score must be finite")
 
-        results.append(
-            SearchResult(
+        score = max(-1.0, min(1.0, score))
+        key = (chunk.document_id, chunk.index)
+        previous = best_results.get(key)
+
+        if previous is None or score > previous.score:
+            best_results[key] = SearchResult(
                 document_id=chunk.document_id,
                 filename=chunk.filename,
                 chunk_index=chunk.index,
-                text=chunk.text,
-                score=max(-1.0, min(1.0, score)),
+                text=text,
+                score=score,
             )
-        )
 
-    results.sort(
+    results = sorted(
+        best_results.values(),
         key=lambda result: (
             -result.score, result.document_id, result.chunk_index
-        )
+        ),
     )
     return results[:top_k]
+
