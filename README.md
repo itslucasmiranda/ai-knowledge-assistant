@@ -1,12 +1,12 @@
 # AI Knowledge Assistant
 
-> **Status: em desenvolvimento.** API para ingestão, armazenamento e busca semântica em documentos. A recuperação de trechos está implementada. Há uma avaliação inicial da recuperação com dados sintéticos. A geração de respostas com um modelo de linguagem e a avaliação dessas respostas são próximas etapas.
+> **Status: em desenvolvimento.** API para ingestão, armazenamento, busca semântica e perguntas sobre documentos. O endpoint `/ask` integra um LLM remoto via Groq e retorna as fontes citadas. Há uma avaliação inicial da recuperação com dados sintéticos; a fidelidade das respostas geradas ainda precisa ser avaliada.
 
 ## Objetivo
 
 Construir uma aplicação de perguntas sobre documentos usando Retrieval-Augmented Generation (RAG), com recuperação de contexto, respostas fundamentadas em fontes e avaliação reproduzível.
 
-A implementação atual cobre ingestão, persistência e recuperação semântica. O endpoint de busca retorna trechos dos documentos e seus metadados de origem.
+A implementação atual cobre ingestão, persistência, recuperação semântica e geração de respostas com contexto. `/search` retorna trechos e metadados; `/ask` usa esses trechos para solicitar uma resposta ao LLM.
 
 ## Funcionalidades implementadas
 
@@ -26,6 +26,9 @@ A implementação atual cobre ingestão, persistência e recuperação semântic
 - Busca semântica via `POST /search`.
 - Filtro opcional por documento e limite de resultados com `top_k`.
 - Resultados com texto, pontuação e metadados da fonte.
+- Perguntas via `POST /ask`, com geração remota pela Groq e fontes citadas.
+- Resposta de contexto insuficiente e validação dos identificadores das fontes.
+- Tratamento de falhas do provedor sem expor credenciais ou o corpo do erro remoto.
 - Demonstração com modelo real e banco temporário.
 - Testes automatizados e workflow no GitHub Actions.
 
@@ -40,6 +43,7 @@ A implementação atual cobre ingestão, persistência e recuperação semântic
 | Embeddings | Sentence Transformers e PyTorch |
 | Modelo pré-treinado | intfloat/multilingual-e5-small |
 | Recuperação | Similaridade de cosseno sobre vetores normalizados |
+| Geração | `openai/gpt-oss-20b` hospedado na Groq, acessado com HTTPX |
 | Testes | pytest |
 | Integração contínua | GitHub Actions |
 
@@ -53,6 +57,8 @@ A implementação atual cobre ingestão, persistência e recuperação semântic
 | `app/storage.py` | Persistência, consulta e leitura de trechos |
 | `app/embeddings.py` | Geração de embeddings, validação e divisão com o tokenizer do modelo |
 | `app/retrieval.py` | Recuperação, pontuação e ordenação dos trechos |
+| `app/answers.py` | Seleção do contexto, montagem da resposta e validação de referências |
+| `app/llm.py` | Credenciais, chamada à Groq e validação do JSON retornado |
 | `scripts/demo_search.py` | Demonstração com modelo real |
 | `scripts/validate_token_chunking.py` | Validação de upload e busca com textos acima do limite e modelo real |
 | `scripts/evaluate_retrieval.py` | Avaliação inicial da recuperação |
@@ -82,7 +88,7 @@ O modelo é reutilizado dentro do processo. O primeiro upload de um documento no
 - [x] Avaliação inicial da recuperação com conjunto sintético
 - [ ] Ampliar a avaliação com conjunto independente e perguntas sem resposta
 - [ ] Persistência de embeddings e indexação vetorial
-- [ ] Endpoint de perguntas com respostas geradas e fontes
+- [x] Endpoint de perguntas com respostas geradas e fontes
 - [ ] Avaliação de fidelidade das respostas
 - [ ] Observabilidade de latência, erros e custos
 - [ ] Docker e demonstração da aplicação completa
@@ -145,6 +151,7 @@ Após reiniciar o computador, execute novamente o comando do Uvicorn na pasta do
 | POST | `/documents` | Recebe, segmenta e persiste um documento |
 | GET | `/documents/{document_id}` | Consulta um documento persistido |
 | POST | `/search` | Recupera trechos por similaridade com uma consulta |
+| POST | `/ask` | Gera uma resposta a partir dos trechos recuperados e retorna fontes |
 
 ## Enviar e consultar documentos
 
@@ -314,7 +321,75 @@ A função `search_documents`, em `app/retrieval.py`:
 
 Entre partes do mesmo trecho, um empate preserva a primeira parte. Entre resultados, empates são resolvidos pelo identificador do documento e pela posição do trecho.
 
-A recuperação devolve conteúdo existente nos documentos. A geração de uma resposta com LLM ainda não está implementada.
+A recuperação devolve conteúdo existente nos documentos. O endpoint `/ask` acrescenta a geração de uma resposta pelo LLM remoto.
+
+## Perguntas com fontes
+
+### Configurar a Groq
+
+A geração usa `openai/gpt-oss-20b` hospedado na Groq. Não é necessário baixar os pesos desse LLM. Os embeddings continuam locais e precisam dos arquivos de `multilingual-e5-small`.
+
+Crie uma chave na [GroqCloud](https://console.groq.com/keys). Na raiz do projeto, crie `.groq-key` com somente a chave, sem aspas. Esse arquivo está excluído pelo `.gitignore`; confirme antes de fazer commits:
+
+```powershell
+git check-ignore .groq-key
+```
+
+O arquivo local tem precedência sobre `GROQ_API_KEY`, para evitar o uso de uma variável antiga durante o desenvolvimento. Quando `.groq-key` não existe, a API lê essa variável de ambiente. Um arquivo existente mas vazio ou inválido causa erro de configuração, sem recorrer à variável.
+
+A chave é carregada somente quando há contexto para gerar uma resposta. `/health`, `/documents` e `/search` não dependem da Groq. Não envie a chave no corpo das requisições.
+
+Para verificar a conexão usando o arquivo local:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.check_groq_file
+```
+
+### Testar no Swagger
+
+1. Inicie a API com `python -m uvicorn app.main:app --reload` usando o Python do ambiente virtual.
+2. Em `/docs`, envie um `.txt` por `POST /documents` e copie o `document_id` retornado.
+3. Em `POST /ask`, clique em `Try it out` e envie o JSON abaixo. Para filtrar, acrescente `document_id` com o identificador real do upload.
+
+```json
+{
+  "query": "Onde ficam salvos os documentos?",
+  "top_k": 3
+}
+```
+
+| Campo | Regra |
+|---|---|
+| `query` | Texto obrigatório, de 1 a 2.000 caracteres após remover espaços nas extremidades; também sujeito ao limite de tokens dos embeddings |
+| `top_k` | Inteiro entre 1 e 5, padrão 3; limita os candidatos ao contexto |
+| `document_id` | Opcional; identificador hexadecimal de 64 caracteres retornado pelo upload |
+
+Campos extras são rejeitados. O limite de `top_k` do `/search` continua sendo 20.
+
+Uma resposta HTTP 200 contém `query`, `status`, `answer` e `sources`. Cada fonte tem `source_id`, `document_id`, `filename`, `chunk_index`, `text` e `score`. Os identificadores `S1`, `S2` etc. são locais a cada requisição. Os metadados vêm do armazenamento, não do LLM.
+
+- `status: "answered"`: o LLM retornou uma resposta e identificadores de fontes presentes no contexto enviado. `sources` contém somente as fontes citadas, sem duplicatas.
+- `status: "insufficient_context"`: não há trechos utilizáveis ou o modelo declarou que não pode responder. A API retorna uma mensagem fixa e `sources: []`. Um filtro sem correspondência também produz esse resultado.
+
+Sem contexto, não há chamada à Groq. Havendo contexto, a pergunta e os textos selecionados são enviados ao provedor externo. Utilize documentos públicos ou sintéticos. A disponibilidade depende da conta, da internet e dos limites do provedor.
+
+### Limites e validação da geração
+
+O contexto inclui trechos inteiros, na ordem da recuperação, até 12.000 caracteres de texto. Um trecho que não cabe é descartado e os seguintes ainda podem ser incluídos. Esse é um orçamento de caracteres, não uma contagem de tokens do LLM. Ele limita o contexto enviado, mas não o trabalho de recuperação dos documentos.
+
+O prompt orienta o modelo a usar somente as fontes, ignorar instruções dentro dos documentos e reconhecer falta de evidência. A resposta usa [Structured Outputs da Groq](https://console.groq.com/docs/structured-outputs) e também é validada localmente. Respostas incompletas, JSON inválido, texto vazio ou identificadores de fontes inexistentes são rejeitados.
+
+Essas verificações não provam que as fontes sustentam cada afirmação. O modelo pode responder incorretamente ou deixar de reconhecer falta de evidência. A resistência a instruções maliciosas em documentos e a fidelidade das respostas precisam de avaliação própria.
+
+| HTTP | Situação |
+|---|---|
+| 200 | Resposta gerada ou contexto insuficiente, distinguíveis pelo campo `status` |
+| 422 | Requisição inválida ou pergunta acima do limite dos embeddings |
+| 502 | Requisição rejeitada pelo provedor, resposta inválida, incompleta ou com referências inválidas |
+| 503 | Credenciais ausentes/rejeitadas, falha de conexão, limite de uso ou indisponibilidade do provedor |
+| 504 | Tempo de espera da chamada ao provedor excedido |
+
+O cliente tem limite de 10 segundos para conexão e 60 segundos para operações de rede. Esses limites não constituem um prazo total do endpoint, que também executa a recuperação. Não há tentativas automáticas que repitam a chamada ao LLM.
 
 ## Demonstração com modelo real
 
@@ -382,7 +457,7 @@ Execute:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-A execução local registrada nesta etapa apresentou **99 testes aprovados**, além de 4 subtestes.
+A validação anterior da segmentação apresentou 99 testes aprovados, além de 4 subtestes. Os testes de `/ask` e do cliente Groq ampliam essa suíte com respostas HTTP simuladas, sem usar uma chave real.
 
 A suíte verifica:
 
@@ -399,6 +474,11 @@ A suíte verifica:
 - Ordenação da recuperação e limite de resultados.
 - Busca em banco vazio e filtro sem correspondência.
 - Contrato HTTP do `/search`.
+- Contrato do `/ask`, filtro por documento, orçamento de contexto e fontes citadas.
+- Ausência de chamada ao provedor quando não há contexto.
+- Recusa do modelo, referências inválidas e respostas truncadas ou malformadas.
+- Leitura das credenciais em arquivo ou variável, precedência e erros sem exposição de segredos.
+- Erros de autenticação, limite de uso, conexão e timeout simulados com `httpx.MockTransport`.
 - Rejeição de parâmetros inválidos e campos extras.
 - Conversão de erros esperados de embeddings em HTTP 422.
 - Preservação de HTTP 500 para falhas internas, sem expor a mensagem interna na resposta testada.
@@ -420,7 +500,10 @@ A metodologia, os erros de ordenação e as limitações estão em
 
 ## Limitações atuais
 
-- Ainda não há geração de respostas com LLM.
+- A geração via Groq ainda não tem avaliação própria de fidelidade ou de perguntas sem resposta.
+- A validação de referências confirma a existência da fonte no contexto, não a correção semântica da resposta.
+- A seleção por similaridade e o prompt não garantem proteção contra instruções maliciosas nos documentos.
+- O LLM remoto exige conexão, credenciais e disponibilidade dentro dos limites da conta. Perguntas e trechos selecionados são enviados à Groq.
 - Os embeddings dos documentos são recalculados a cada consulta.
 - Ainda não há persistência dos vetores nem índice vetorial.
 - Todos os trechos selecionados são lidos e comparados. A implementação inicial é destinada a pequenos conjuntos de documentos.

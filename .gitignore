@@ -221,3 +221,4 @@ __marimo__/
 
 /data/*.sqlite3
 /data/*.sqlite3-*
+.groq-key
