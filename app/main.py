@@ -10,6 +10,13 @@ from app.storage import DocumentStore, StoredDocument
 
 from app.embeddings import EmbeddingInputError, split_passages
 from app.retrieval import SearchResult, search_documents
+from app.answers import AnswerResponse, answer_question
+from app.llm import (
+    LLMConfigurationError,
+    LLMResponseError,
+    LLMTimeoutError,
+    LLMUnavailableError,
+)
 
 app = FastAPI(title="AI Knowledge Assistant", version="0.1.0")
 
@@ -169,3 +176,28 @@ def search(
         result_count=len(results),
         results=results,
     )
+
+
+class AskRequest(SearchRequest):
+    top_k: Annotated[int, Field(strict=True, ge=1, le=5)] = 3
+
+
+@app.post("/ask", response_model=AnswerResponse)
+def ask(
+    request: AskRequest,
+    store: Annotated[DocumentStore, Depends(get_store)],
+) -> AnswerResponse:
+    try:
+        return answer_question(
+            store, request.query, top_k=request.top_k, document_id=request.document_id
+        )
+    except EmbeddingInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except LLMConfigurationError:
+        raise HTTPException(status_code=503, detail="Answer generation is not configured") from None
+    except LLMUnavailableError:
+        raise HTTPException(status_code=503, detail="Answer generation is temporarily unavailable") from None
+    except LLMTimeoutError:
+        raise HTTPException(status_code=504, detail="Answer generation timed out") from None
+    except LLMResponseError:
+        raise HTTPException(status_code=502, detail="Answer provider returned an invalid response") from None
