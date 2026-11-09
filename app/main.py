@@ -103,7 +103,7 @@ def ingest_document(
             filename=filename,
             chunks=split_passages(chunk_text(text)),
         )
-        
+
         store.save(document)
         stored_document = store.get(document.document_id)
 

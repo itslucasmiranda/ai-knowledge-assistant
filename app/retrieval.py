@@ -72,4 +72,3 @@ def search_documents(
         ),
     )
     return results[:top_k]
-

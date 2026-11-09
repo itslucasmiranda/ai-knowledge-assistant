@@ -98,4 +98,3 @@ class LegacyRetrievalTests(unittest.TestCase):
             retrieval.search_documents(self.store, "Onde?")
 
         self.encoder.assert_not_called()
-

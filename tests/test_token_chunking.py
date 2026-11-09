@@ -61,7 +61,7 @@ class TokenChunkingTests(unittest.TestCase):
             all(
                 part and len("passage: " + part) <= 40
                 for part in chunks
-            )   
+            )
         )
 
     def test_invalid_inputs_are_rejected(self):
