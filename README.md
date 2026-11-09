@@ -1,6 +1,6 @@
 # AI Knowledge Assistant
 
-> **Status: em desenvolvimento.** API para ingestão, armazenamento e busca semântica em documentos. A recuperação de trechos está implementada. A geração de respostas com um modelo de linguagem e a avaliação sistemática de qualidade são próximas etapas.
+> **Status: em desenvolvimento.** API para ingestão, armazenamento e busca semântica em documentos. A recuperação de trechos está implementada. Há uma avaliação inicial da recuperação com dados sintéticos. A geração de respostas com um modelo de linguagem e a avaliação dessas respostas são próximas etapas.
 
 ## Objetivo
 
@@ -14,7 +14,9 @@ A implementação atual cobre ingestão, persistência e recuperação semântic
 - Verificação de saúde com `GET /health`.
 - Upload de arquivos `.txt` em UTF-8, com ou sem BOM.
 - Validação de extensão, conteúdo e tamanho máximo de 1 MiB.
-- Segmentação em trechos de até 100 palavras, com sobreposição de 20.
+- Segmentação inicial em trechos de até 100 palavras, com sobreposição de 20.
+- Divisão adicional dos trechos que excedem o limite de tokens, antes da persistência.
+- Tratamento de trechos antigos acima do limite durante a busca, sem alterar o banco.
 - Identificação de documentos pelo SHA-256 dos bytes enviados.
 - Persistência de documentos e trechos em SQLite.
 - Consulta de documentos pelo identificador.
@@ -46,21 +48,25 @@ A implementação atual cobre ingestão, persistência e recuperação semântic
 | Arquivo ou diretório | Responsabilidade |
 |---|---|
 | `app/main.py` | Endpoints, validação das requisições e respostas |
-| `app/chunking.py` | Segmentação de texto com sobreposição |
+| `app/chunking.py` | Segmentação inicial por palavras com sobreposição |
+| `app/token_chunking.py` | Divisão de texto conforme uma função de contagem de tokens |
 | `app/storage.py` | Persistência, consulta e leitura de trechos |
-| `app/embeddings.py` | Geração de embeddings e validação das entradas |
+| `app/embeddings.py` | Geração de embeddings, validação e divisão com o tokenizer do modelo |
 | `app/retrieval.py` | Recuperação, pontuação e ordenação dos trechos |
 | `scripts/demo_search.py` | Demonstração com modelo real |
+| `scripts/validate_token_chunking.py` | Validação de upload e busca com textos acima do limite e modelo real |
+| `scripts/evaluate_retrieval.py` | Avaliação inicial da recuperação |
+| `evals/` | Conjunto sintético, metodologia e relatório de referência |
 | `tests/` | Testes automatizados com armazenamento isolado |
 | `.github/workflows/tests.yml` | Execução dos testes no GitHub Actions |
 
 ## Fluxo da aplicação
 
-Na ingestão, a API valida o arquivo, calcula seu identificador, segmenta o texto e persiste o documento e os trechos no SQLite.
+Na ingestão, a API valida o arquivo e calcula seu identificador. Se ele já existir, retorna o documento preservado. Para novos documentos, segmenta o texto por palavras, subdivide os trechos que excedem o limite de tokens e persiste o resultado no SQLite.
 
-Na busca, a API valida a consulta, lê os trechos selecionados, gera embeddings e calcula a similaridade com a pergunta. A resposta contém os trechos ordenados e seus metadados de origem.
+Na busca, a API valida a consulta, lê os trechos selecionados e subdivide em memória os que excedem o limite de tokens. Depois, gera embeddings e calcula a similaridade com a pergunta. Cada trecho armazenado contribui com no máximo um resultado, representado pela parte de maior pontuação e pelos metadados do trecho original.
 
-O modelo é reutilizado dentro do processo. Os embeddings dos documentos ainda são recalculados a cada busca.
+O modelo é reutilizado dentro do processo. O primeiro upload de um documento novo também pode carregar e baixar o modelo, pois usa seu tokenizer. Os embeddings dos documentos ainda são recalculados a cada busca.
 
 ## Roadmap
 
@@ -68,6 +74,7 @@ O modelo é reutilizado dentro do processo. Os embeddings dos documentos ainda s
 - [x] Ingestão e segmentação de documentos
 - [x] Persistência em SQLite e consulta por identificador
 - [x] Embeddings locais com validação de entradas
+- [x] Segmentação conforme o limite de tokens e compatibilidade com documentos antigos
 - [x] Recuperação semântica com pontuação e fontes
 - [x] Endpoint HTTP de busca semântica
 - [x] Demonstração com modelo real
@@ -230,11 +237,13 @@ Cada item de `results` contém:
 |---|---|
 | `document_id` | Identificador do documento de origem |
 | `filename` | Nome do arquivo de origem |
-| `chunk_index` | Posição do trecho, começando em zero |
-| `text` | Texto recuperado |
+| `chunk_index` | Posição do trecho armazenado de origem, começando em zero |
+| `text` | Texto recuperado; pode ser uma parte do trecho original quando ele exceder o limite |
 | `score` | Similaridade entre o trecho e a consulta |
 
 `top_k` define o máximo de resultados. Uma busca com `top_k: 3` pode retornar apenas um trecho se houver somente um disponível.
+
+Quando um trecho armazenado precisa ser subdividido, somente sua parte de maior pontuação entra no ranking. `top_k` limita os resultados por trecho armazenado, não por documento: vários trechos do mesmo documento ainda podem aparecer.
 
 O score não representa uma porcentagem de acerto nem a probabilidade de uma resposta estar correta.
 
@@ -287,7 +296,9 @@ O projeto integra o modelo pré-treinado
 - A execução utiliza CPU.
 - O modelo é carregado sob demanda e reutilizado no processo.
 - A primeira execução precisa baixar os arquivos do modelo.
-- Entradas vazias ou acima do limite de tokens são rejeitadas.
+- Entradas vazias são rejeitadas.
+- Perguntas acima do limite de tokens são rejeitadas.
+- Os trechos são subdivididos antes da codificação; as funções de geração de embeddings mantêm a validação que rejeita entradas acima do limite.
 - A contagem considera o prefixo e os tokens especiais.
 
 O modelo é pré-treinado por terceiros. O projeto implementa sua integração, sem treinamento ou ajuste fino próprio.
@@ -296,11 +307,12 @@ A função `search_documents`, em `app/retrieval.py`:
 
 1. Valida a consulta e `top_k`.
 2. Lê os trechos persistidos, aplicando o filtro opcional por documento.
-3. Gera embeddings da consulta e dos trechos.
-4. Calcula o produto escalar dos vetores normalizados, equivalente à similaridade de cosseno.
-5. Ordena os resultados e retorna até `top_k` trechos.
+3. Gera o embedding da consulta e subdivide os trechos que excedem o limite.
+4. Gera embeddings das partes e calcula o produto escalar dos vetores normalizados, equivalente à similaridade de cosseno.
+5. Seleciona a parte de maior pontuação de cada trecho armazenado.
+6. Ordena os resultados e retorna até `top_k` trechos.
 
-Empates são resolvidos pelo identificador do documento e pela posição do trecho.
+Entre partes do mesmo trecho, um empate preserva a primeira parte. Entre resultados, empates são resolvidos pelo identificador do documento e pela posição do trecho.
 
 A recuperação devolve conteúdo existente nos documentos. A geração de uma resposta com LLM ainda não está implementada.
 
@@ -327,6 +339,41 @@ O endpoint HTTP também foi exercitado com um documento sobre armazenamento em S
 
 Essas verificações demonstram a integração com o modelo real. O teste HTTP com um único documento não mede a qualidade do ranking entre documentos concorrentes. As pontuações podem variar entre ambientes e versões.
 
+## Segmentação por tokens
+
+A segmentação inicial utiliza até 100 palavras e sobreposição de 20 palavras. Cada trecho passa depois pelo tokenizer de `multilingual-e5-small`, incluindo o prefixo `passage: ` e os tokens especiais.
+
+O limite efetivo é o menor valor entre 512 e `model.max_seq_length`. Quando um trecho excede esse limite, ele é dividido próximo ao meio, preferindo espaços. Uma palavra muito longa pode ser dividida entre caracteres. O procedimento continua até que cada parte respeite o limite.
+
+A divisão adicional não cria nova sobreposição. Portanto, as partes finais não têm garantia de sobreposição de 20 palavras entre todos os pares consecutivos. A segmentação também normaliza espaços e quebras de linha.
+
+Novos uploads persistem os trechos já ajustados. Documentos antigos são subdivididos somente em memória durante a busca. Seus registros e índices permanecem intactos. Reenviar um documento idêntico retorna o registro existente, sem migrar seus trechos.
+
+### Validar com o modelo real
+
+Execute na raiz do projeto:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.validate_token_chunking
+```
+
+O script usa o cliente de testes da API e um banco temporário. Não é necessário iniciar o Uvicorn. Ele verifica upload, persistência, busca em documentos novos e antigos e preservação do documento antigo.
+
+Na execução local de 9 de novembro de 2026:
+
+| Verificação | Resultado |
+|---|---|
+| Tokens do texto original, incluindo prefixo e tokens especiais | 1.814 |
+| Limite efetivo do modelo | 512 |
+| Trechos gerados no upload | 5 |
+| Maior trecho, incluindo prefixo e tokens especiais | 453 |
+| Upload, persistência e busca com modelo real | Aprovados |
+| Preservação do documento antigo | Aprovada |
+
+O tokenizer pode emitir um aviso ao contar o texto original acima do limite. Essa contagem é intencional; o texto completo não é enviado para a inferência de embeddings. A codificação recebe as partes que respeitam o limite.
+
+Essa execução verifica a integração, não a qualidade do ranking. O modelo não tem uma revisão fixa configurada, portanto contagens e resultados não são garantidos como idênticos em outros ambientes.
+
 ## Testes automatizados
 
 Execute:
@@ -335,13 +382,16 @@ Execute:
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-A execução local registrada nesta etapa apresentou **79 testes aprovados**.
+A execução local registrada nesta etapa apresentou **99 testes aprovados**, além de 4 subtestes.
 
 A suíte verifica:
 
 - Endpoint de saúde.
 - Upload e validações de conteúdo, extensão e tamanho.
-- Segmentação e sobreposição.
+- Segmentação inicial e sobreposição.
+- Divisão por tokens, preservação da ordem e tratamento de palavras longas.
+- Persistência de trechos ajustados e reenvio sem novo carregamento do modelo.
+- Busca em documentos antigos, seleção da melhor parte e preservação do banco.
 - Persistência, duplicidade e consulta por identificador.
 - Leitura de trechos com metadados e filtro por documento.
 - Isolamento do armazenamento.
@@ -355,13 +405,13 @@ A suíte verifica:
 
 Os testes de embeddings, recuperação e busca HTTP utilizam modelos ou funções de codificação simulados. Após instalar as dependências, a suíte não precisa baixar os pesos do modelo nem executar inferência real.
 
-A demonstração e o teste manual pela API exercitam separadamente o modelo real.
+A demonstração, o teste manual pela API e o script de validação de tokens exercitam separadamente o modelo real.
 
 O GitHub Actions executa a suíte em pushes e pull requests.
 
 ## Avaliação inicial da recuperação
 
-A avaliação com 6 documentos sintéticos e 12 perguntas apresentou
+A avaliação de referência anterior à correção de segmentação por tokens, com 6 documentos sintéticos e 12 perguntas, apresentou
 Hit@1 de 83,33%, Hit@3 de 100% e MRR@3 de 0,9028.
 
 Esses resultados descrevem somente esse conjunto inicial.
@@ -375,13 +425,13 @@ A metodologia, os erros de ordenação e as limitações estão em
 - Ainda não há persistência dos vetores nem índice vetorial.
 - Todos os trechos selecionados são lidos e comparados. A implementação inicial é destinada a pequenos conjuntos de documentos.
 - Não há limiar mínimo de relevância. A busca pode retornar trechos pouco relacionados à pergunta.
-- A qualidade da recuperação ainda precisa de avaliação reproduzível com mais documentos e perguntas.
-- A segmentação considera palavras, não tokens, e normaliza espaços e quebras de linha.
-- Um trecho de até 100 palavras pode ultrapassar o limite de tokens do modelo. Nesse caso, a busca é interrompida e o endpoint retorna HTTP 422.
-- O tratamento de trechos acima do limite durante a ingestão ainda está pendente.
+- A segmentação normaliza espaços e quebras de linha. A subdivisão por tokens não acrescenta sobreposição e pode separar palavras muito longas.
+- A busca de documentos antigos usa a maior pontuação entre as partes de cada trecho. O efeito dessa política sobre a qualidade do ranking ainda precisa ser avaliado.
+- A ingestão de documentos novos depende do carregamento do modelo e da tokenização, o que acrescenta latência.
+- Não há orçamento global de quantidade de trechos ou de trabalho por requisição. O limite de arquivo não garante tempo de processamento baixo.
+- A revisão dos arquivos do modelo ainda não está fixada.
 - O limite de 1 MiB é verificado no endpoint após o processamento multipart.
 - Autenticação, limites de requisições e controles para implantação pública ainda não foram implementados.
-
 - A avaliação inicial utiliza um conjunto sintético pequeno. Ainda é necessário ampliar os dados e avaliar em um conjunto independente, incluindo perguntas sem resposta.
 
 ## Princípios
