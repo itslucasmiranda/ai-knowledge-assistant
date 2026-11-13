@@ -1,0 +1,15 @@
+**
+!Dockerfile
+!requirements.txt
+!pytest.ini
+!app/
+!app/**
+!scripts/
+!scripts/evaluate_answers.py
+!scripts/demo_rag.py
+!evals/
+!evals/answers.json
+!examples/
+!examples/*.txt
+**/__pycache__
+**/*.pyc

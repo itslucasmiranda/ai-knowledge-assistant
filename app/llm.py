@@ -46,9 +46,13 @@ class Generation(BaseModel):
 
 
 def load_api_key() -> str:
+    configured_path = os.environ.get("GROQ_API_KEY_FILE")
+    path = Path(configured_path) if configured_path else KEY_PATH
     try:
-        key = KEY_PATH.read_text(encoding="utf-8-sig").strip()
+        key = path.read_text(encoding="utf-8-sig").strip()
     except FileNotFoundError:
+        if configured_path:
+            raise LLMConfigurationError("Configured LLM credentials file was not found") from None
         key = os.environ.get("GROQ_API_KEY", "").strip()
     except (OSError, UnicodeError):
         raise LLMConfigurationError("LLM credentials could not be loaded") from None

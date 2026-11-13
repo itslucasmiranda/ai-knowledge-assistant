@@ -1,0 +1,129 @@
+{
+  "name": "answers_pt_br_v1",
+  "description": "Conjunto sintético de desenvolvimento sobre o projeto fictício Atlas. Não é benchmark de produção nem avaliação independente.",
+  "documents": [
+    {
+      "id": "storage",
+      "filename": "armazenamento.txt",
+      "text": "No projeto fictício Atlas, documentos e trechos ficam em SQLite no arquivo data/documents.sqlite3. Reiniciar a API preserva os registros, desde que esse arquivo seja mantido."
+    },
+    {
+      "id": "support",
+      "filename": "suporte.txt",
+      "text": "O suporte do projeto fictício Atlas atende de segunda a sexta-feira, das 9h às 17h, pelo e-mail suporte@example.com. Aos sábados e domingos não há atendimento. A primeira resposta leva até dois dias úteis."
+    },
+    {
+      "id": "upload",
+      "filename": "envio.txt",
+      "text": "O projeto fictício Atlas aceita arquivos .txt em UTF-8 de até 1 MiB (1.048.576 bytes). PDF e DOCX não são aceitos. Envie o arquivo pelo campo file de POST /documents. O upload retorna document_id para consultar GET /documents/{document_id}."
+    },
+    {
+      "id": "search",
+      "filename": "busca.txt",
+      "text": "No projeto fictício Atlas, POST /search recupera trechos dos documentos. POST /ask gera uma resposta com fontes. O campo document_id restringe a consulta a um documento. Se não houver informação suficiente, /ask retorna status insufficient_context."
+    }
+  ],
+  "queries": [
+    {
+      "id": "a01",
+      "query": "Onde o Atlas armazena meus documentos?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "storage"
+      ],
+      "reference_answer": "Em SQLite, no arquivo data/documents.sqlite3."
+    },
+    {
+      "id": "a02",
+      "query": "Vou perder os documentos se reiniciar a API?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "storage"
+      ],
+      "reference_answer": "Não, desde que o arquivo do banco seja preservado."
+    },
+    {
+      "id": "a03",
+      "query": "Como entro em contato com o suporte e em qual horário?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "support"
+      ],
+      "reference_answer": "Pelo e-mail suporte@example.com, de segunda a sexta, das 9h às 17h."
+    },
+    {
+      "id": "a04",
+      "query": "Quanto tempo leva para receber a primeira resposta do suporte?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "support"
+      ],
+      "reference_answer": "Até dois dias úteis."
+    },
+    {
+      "id": "a05",
+      "query": "Posso enviar um PDF de 500 KB?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "upload"
+      ],
+      "reference_answer": "Não. Só arquivos .txt em UTF-8 são aceitos."
+    },
+    {
+      "id": "a06",
+      "query": "Qual é o tamanho máximo de cada arquivo em bytes?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "upload"
+      ],
+      "reference_answer": "1.048.576 bytes (1 MiB)."
+    },
+    {
+      "id": "a07",
+      "query": "Como obtenho uma resposta com fontes restrita a um documento?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "search"
+      ],
+      "reference_answer": "Use POST /ask e o campo document_id."
+    },
+    {
+      "id": "a08",
+      "query": "Onde os dados ficam salvos e qual e-mail uso para falar com o suporte?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "storage",
+        "support"
+      ],
+      "reference_answer": "Em SQLite no arquivo data/documents.sqlite3; suporte@example.com."
+    },
+    {
+      "id": "a09",
+      "query": "Qual é o preço mensal do plano profissional?",
+      "expected_status": "insufficient_context",
+      "relevant_document_ids": [],
+      "reference_answer": "Os documentos não informam preços."
+    },
+    {
+      "id": "a10",
+      "query": "Qual é o número de telefone do suporte?",
+      "expected_status": "insufficient_context",
+      "relevant_document_ids": [],
+      "reference_answer": "Os documentos não informam telefone."
+    },
+    {
+      "id": "a11",
+      "query": "Em qual provedor de nuvem o Atlas está hospedado?",
+      "expected_status": "insufficient_context",
+      "relevant_document_ids": [],
+      "reference_answer": "Os documentos não informam o provedor de hospedagem."
+    },
+    {
+      "id": "a12",
+      "query": "Em que dia, mês e ano o Atlas foi lançado?",
+      "expected_status": "insufficient_context",
+      "relevant_document_ids": [],
+      "reference_answer": "Os documentos não informam a data de lançamento."
+    }
+  ]
+}

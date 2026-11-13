@@ -8,6 +8,7 @@ from app import llm
 
 @pytest.fixture(autouse=True)
 def credentials(monkeypatch, tmp_path):
+    monkeypatch.delenv("GROQ_API_KEY_FILE", raising=False)
     path = tmp_path / ".groq-key"
     monkeypatch.setattr(llm, "KEY_PATH", path)
     monkeypatch.setenv("GROQ_API_KEY", "gsk_test_only")
@@ -118,3 +119,17 @@ def test_invalid_or_truncated_responses_are_rejected(monkeypatch, payload):
     install_transport(monkeypatch, lambda request: httpx.Response(200, json=payload))
     with pytest.raises(llm.LLMResponseError):
         llm.generate_answer("Onde?", [])
+
+
+def test_explicit_credentials_file_overrides_default_and_environment(monkeypatch, credentials, tmp_path):
+    credentials.write_text("gsk_default", encoding="utf-8")
+    mounted = tmp_path / "mounted-secret"
+    mounted.write_text("gsk_mounted\n", encoding="utf-8")
+    monkeypatch.setenv("GROQ_API_KEY_FILE", str(mounted))
+    assert llm.load_api_key() == "gsk_mounted"
+
+
+def test_missing_explicit_file_does_not_fall_back(monkeypatch, tmp_path):
+    monkeypatch.setenv("GROQ_API_KEY_FILE", str(tmp_path / "missing"))
+    with pytest.raises(llm.LLMConfigurationError):
+        llm.load_api_key()

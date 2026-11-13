@@ -11,6 +11,7 @@ from app.storage import DocumentStore, StoredDocument
 from app.embeddings import EmbeddingInputError, split_passages
 from app.retrieval import SearchResult, search_documents
 from app.answers import AnswerResponse, answer_question
+from app.observability import record_request
 from app.llm import (
     LLMConfigurationError,
     LLMResponseError,
@@ -18,7 +19,8 @@ from app.llm import (
     LLMUnavailableError,
 )
 
-app = FastAPI(title="AI Knowledge Assistant", version="0.1.0")
+app = FastAPI(title="AI Knowledge Assistant", version="1.0.0")
+app.middleware("http")(record_request)
 
 MAX_FILE_SIZE = 1024 * 1024
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "documents.sqlite3"

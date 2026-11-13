@@ -1,0 +1,1 @@
+Os documentos enviados ficam armazenados em um banco SQLite. Os dados permanecem disponíveis depois de reiniciar a aplicação, desde que o arquivo do banco seja preservado. Este documento não informa preços de assinatura.
