@@ -1,6 +1,6 @@
 # AI Knowledge Assistant
 
-> **v1 funcional para demonstração local.** API de ingestão, persistência, busca semântica e perguntas com fontes. Inclui Docker, CI, logs e avaliações sintéticas. A avaliação em lote das respostas reais e sua revisão humana devem ser executadas com credenciais; não há alegação de fidelidade validada em produção.
+> **v1 funcional para demonstração local.** API de ingestão, persistência, busca semântica e perguntas com fontes. Inclui Docker, CI, logs e avaliações sintéticas. Uma execução real obteve 11/12 status corretos, incluindo 4/4 recusas adequadas; a recusa indevida e a análise das fontes estão documentadas. Não há alegação de fidelidade validada em produção.
 
 [Demo](docs/DEMO.md) · [Avaliação de respostas](evals/ANSWERS.md) · [Notas da v1](docs/releases/v1.0.0.md)
 
@@ -86,7 +86,7 @@ O modelo é reutilizado dentro do processo. O primeiro upload de um documento no
 - [x] Logs de requisições, latência e status
 - [x] Docker e roteiro de demonstração completa
 
-A execução real da avaliação de respostas e a revisão humana são etapas de validação, descritas em [evals/ANSWERS.md](evals/ANSWERS.md). Persistência dos vetores, índice vetorial, avaliação independente, medição de custos e implantação pública ficam para evoluções futuras.
+A primeira execução real e a análise assistida estão em [evals/ANSWERS_BASELINE.md](evals/ANSWERS_BASELINE.md). Uma avaliação humana independente permanece como evolução da validação. Persistência dos vetores, índice vetorial, avaliação independente, medição de custos e implantação pública ficam para evoluções futuras.
 
 ## Requisitos
 
@@ -525,6 +525,12 @@ Na raiz, usando o mesmo ambiente Python e a chave já configurada:
 
 A demo mostra dois casos; a avaliação executa 12 perguntas com modelos reais em banco temporário. O relatório inclui resposta, fontes, status, falhas, latência, versões e campos de revisão humana. Os scripts utilizam a cota da Groq e não alteram seus documentos. Consulte a [metodologia](evals/ANSWERS.md) e o [roteiro da demo](docs/DEMO.md).
 
+## Resultado inicial das respostas
+
+Uma execução real no conjunto sintético `answers_pt_br_v1` apresentou **11/12 status corretos**, **7/8 perguntas respondíveis respondidas** e **4/4 recusas adequadas**, sem erros de execução. A latência p50 foi 568,65 ms e a p95 foi 1.033,48 ms, excluindo preparação e pausas.
+
+O caso sobre envio de PDF recebeu uma recusa indevida, apesar de o documento informar que o formato não é aceito. A análise assistida encontrou apoio nas fontes para as sete respostas geradas. O conjunto é pequeno, a árvore de trabalho da execução estava marcada como alterada e não houve avaliação humana independente. Veja [relatório, análise e limites](evals/ANSWERS_BASELINE.md).
+
 ## Observabilidade
 
 As respostas recebem `X-Request-ID` e `X-Process-Time-Ms`. Os logs JSON incluem método, template da rota, status e duração até a criação da resposta. O middleware não registra corpo, query string, identificadores de documentos ou credenciais. Falhas não tratadas são registradas com status 500; as respostas 500 geradas fora do middleware podem não conter esses cabeçalhos.
@@ -533,7 +539,7 @@ Execute o Uvicorn com `--no-access-log`, como no Docker, para evitar que o log p
 
 ## Limitações atuais
 
-- Há um conjunto de desenvolvimento para respostas e recusas, mas a avaliação em lote real e a revisão humana de fidelidade precisam ser executadas; testes simulados não substituem essa evidência.
+- A avaliação de respostas cobre 12 casos sintéticos em uma execução real: houve uma recusa indevida sobre PDF. A análise assistida das fontes não substitui avaliação humana independente nem comprova generalização.
 - A validação de referências confirma a existência da fonte no contexto, não a correção semântica da resposta.
 - A seleção por similaridade e o prompt não garantem proteção contra instruções maliciosas nos documentos.
 - O LLM remoto exige conexão, credenciais e disponibilidade dentro dos limites da conta. Perguntas e trechos selecionados são enviados à Groq.

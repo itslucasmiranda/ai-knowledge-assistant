@@ -51,7 +51,7 @@ Não use apenas coincidência de palavras ou a presença de `source_id` para dec
 
 ## Evidências e limites
 
-A avaliação em lote com o modelo real deve ser executada no ambiente com credenciais. Nenhuma métrica de geração foi preenchida antecipadamente. A validação manual anterior demonstrou dois casos pelo Swagger: resposta sobre SQLite com fonte e recusa de uma pergunta sobre preço não informado. Esses dois casos não substituem esta avaliação.
+A primeira execução real está preservada no [relatório JSON](results/answers_20261113T023133226390Z.json), com [análise dos 12 casos](ANSWERS_BASELINE.md). Foram 11/12 status corretos, 7/8 perguntas respondíveis respondidas, 4/4 recusas adequadas e zero erros de execução. O caso a05 recusou uma pergunta sobre PDF cuja resposta estava no conjunto. Os campos de revisão humana independente permanecem vazios; a análise assistida e suas limitações estão documentadas separadamente.
 
 O relatório registra nomes dos modelos, hash do conjunto e do prompt, revisão Git quando disponível, indicação de alterações locais e versões das dependências. A revisão dos pesos e a versão servida pelo provedor não estão fixadas; os resultados podem variar. Depois de ajustes baseados neste conjunto, use um conjunto separado para avaliar generalização.
 
