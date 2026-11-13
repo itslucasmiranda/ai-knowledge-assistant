@@ -1,0 +1,383 @@
+{
+  "dataset": "answers_pt_br_v1",
+  "execution": "real_models",
+  "metadata": {
+    "created_at": "2026-11-13T02:34:46.255976+00:00",
+    "generation_model": "openai/gpt-oss-20b",
+    "embedding_model": "intfloat/multilingual-e5-small",
+    "dataset_sha256": "4de81efafb258df18f0cfb1898b2d8036bc7ae79284947fe5774dbffd84bdfc9",
+    "prompt_sha256": "298b22145b5c74d18c54f10969e5b5cad90ac08e9f0d4cec04b758027cc22d57",
+    "git_revision": "1960cc256d5666ac256594051a9cc42334077b97",
+    "working_tree_dirty": true,
+    "python": "3.14.7",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "packages": {
+      "sentence-transformers": "6.2.0",
+      "torch": "2.15.0+cpu",
+      "transformers": "5.22.1",
+      "httpx": "0.28.1",
+      "fastapi": "0.162.0",
+      "pydantic": "2.14.2"
+    },
+    "top_k": 5,
+    "model_revisions_pinned": false
+  },
+  "setup_ms": 75077.79,
+  "delay_seconds": 10.0,
+  "metrics": {
+    "case_count": 12,
+    "error_count": 0,
+    "status_accuracy": 0.9166666666666666,
+    "answerable_answer_rate": 0.875,
+    "unanswerable_abstention_rate": 1.0,
+    "source_document_recall": 0.875,
+    "source_document_precision": 0.875,
+    "latency_p50_ms": 568.65,
+    "latency_p95_ms": 1033.48
+  },
+  "cases": [
+    {
+      "id": "a01",
+      "query": "Onde o Atlas armazena meus documentos?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "storage"
+      ],
+      "reference_answer": "Em SQLite, no arquivo data/documents.sqlite3.",
+      "document_id": null,
+      "status": "answered",
+      "answer": "O Atlas armazena os documentos em um banco SQLite no arquivo data/documents.sqlite3.",
+      "sources": [
+        {
+          "source_id": "S1",
+          "document_id": "6d55e7e38f0b82b087d80887ca01551f8cd5c42affda33615929768b5f6a34cf",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "text": "No projeto fictício Atlas, documentos e trechos ficam em SQLite no arquivo data/documents.sqlite3. Reiniciar a API preserva os registros, desde que esse arquivo seja mantido.",
+          "score": 0.8835187373656798
+        }
+      ],
+      "cited_document_ids": [
+        "storage"
+      ],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 798.16
+    },
+    {
+      "id": "a02",
+      "query": "Vou perder os documentos se reiniciar a API?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "storage"
+      ],
+      "reference_answer": "Não, desde que o arquivo do banco seja preservado.",
+      "document_id": null,
+      "status": "answered",
+      "answer": "Não, os documentos não serão perdidos ao reiniciar a API, desde que o arquivo data/documents.sqlite3 seja mantido.",
+      "sources": [
+        {
+          "source_id": "S1",
+          "document_id": "6d55e7e38f0b82b087d80887ca01551f8cd5c42affda33615929768b5f6a34cf",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "text": "No projeto fictício Atlas, documentos e trechos ficam em SQLite no arquivo data/documents.sqlite3. Reiniciar a API preserva os registros, desde que esse arquivo seja mantido.",
+          "score": 0.8907694262376947
+        }
+      ],
+      "cited_document_ids": [
+        "storage"
+      ],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 804.77
+    },
+    {
+      "id": "a03",
+      "query": "Como entro em contato com o suporte e em qual horário?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "support"
+      ],
+      "reference_answer": "Pelo e-mail suporte@example.com, de segunda a sexta, das 9h às 17h.",
+      "document_id": null,
+      "status": "answered",
+      "answer": "Você pode entrar em contato com o suporte do Atlas pelo e‑mail suporte@example.com. O atendimento funciona de segunda a sexta-feira, das 9h às 17h, e não está disponível nos finais de semana.",
+      "sources": [
+        {
+          "source_id": "S1",
+          "document_id": "c7dd0c977e1c197a3d63b814bb4b17262de7ccb8dc99b2ab465bac6758b3cf42",
+          "filename": "suporte.txt",
+          "chunk_index": 0,
+          "text": "O suporte do projeto fictício Atlas atende de segunda a sexta-feira, das 9h às 17h, pelo e-mail suporte@example.com. Aos sábados e domingos não há atendimento. A primeira resposta leva até dois dias úteis.",
+          "score": 0.8559671889395405
+        }
+      ],
+      "cited_document_ids": [
+        "support"
+      ],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 1033.48
+    },
+    {
+      "id": "a04",
+      "query": "Quanto tempo leva para receber a primeira resposta do suporte?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "support"
+      ],
+      "reference_answer": "Até dois dias úteis.",
+      "document_id": null,
+      "status": "answered",
+      "answer": "Até dois dias úteis.",
+      "sources": [
+        {
+          "source_id": "S1",
+          "document_id": "c7dd0c977e1c197a3d63b814bb4b17262de7ccb8dc99b2ab465bac6758b3cf42",
+          "filename": "suporte.txt",
+          "chunk_index": 0,
+          "text": "O suporte do projeto fictício Atlas atende de segunda a sexta-feira, das 9h às 17h, pelo e-mail suporte@example.com. Aos sábados e domingos não há atendimento. A primeira resposta leva até dois dias úteis.",
+          "score": 0.8723538783459125
+        }
+      ],
+      "cited_document_ids": [
+        "support"
+      ],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 679.75
+    },
+    {
+      "id": "a05",
+      "query": "Posso enviar um PDF de 500 KB?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "upload"
+      ],
+      "reference_answer": "Não. Só arquivos .txt em UTF-8 são aceitos.",
+      "document_id": null,
+      "status": "insufficient_context",
+      "answer": "Não encontrei informações suficientes nos documentos para responder.",
+      "sources": [],
+      "cited_document_ids": [],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 556.01
+    },
+    {
+      "id": "a06",
+      "query": "Qual é o tamanho máximo de cada arquivo em bytes?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "upload"
+      ],
+      "reference_answer": "1.048.576 bytes (1 MiB).",
+      "document_id": null,
+      "status": "answered",
+      "answer": "O tamanho máximo de cada arquivo é 1 MiB, equivalente a 1.048.576 bytes.",
+      "sources": [
+        {
+          "source_id": "S1",
+          "document_id": "9babb827500bd9253816a4ea530f43d337e61acba82b5f86560470eb63125657",
+          "filename": "envio.txt",
+          "chunk_index": 0,
+          "text": "O projeto fictício Atlas aceita arquivos .txt em UTF-8 de até 1 MiB (1.048.576 bytes). PDF e DOCX não são aceitos. Envie o arquivo pelo campo file de POST /documents. O upload retorna document_id para consultar GET /documents/{document_id}.",
+          "score": 0.8707497927079534
+        }
+      ],
+      "cited_document_ids": [
+        "upload"
+      ],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 549.11
+    },
+    {
+      "id": "a07",
+      "query": "Como obtenho uma resposta com fontes restrita a um documento?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "search"
+      ],
+      "reference_answer": "Use POST /ask e o campo document_id.",
+      "document_id": null,
+      "status": "answered",
+      "answer": "Use POST /ask com o campo document_id para limitar a resposta ao documento desejado.",
+      "sources": [
+        {
+          "source_id": "S1",
+          "document_id": "9743e3e0d9dbf394459cf7dbdc0992d39398d9361fd3328d767cc1b9ef4b7af7",
+          "filename": "busca.txt",
+          "chunk_index": 0,
+          "text": "No projeto fictício Atlas, POST /search recupera trechos dos documentos. POST /ask gera uma resposta com fontes. O campo document_id restringe a consulta a um documento. Se não houver informação suficiente, /ask retorna status insufficient_context.",
+          "score": 0.8759672425219659
+        }
+      ],
+      "cited_document_ids": [
+        "search"
+      ],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 564.49
+    },
+    {
+      "id": "a08",
+      "query": "Onde os dados ficam salvos e qual e-mail uso para falar com o suporte?",
+      "expected_status": "answered",
+      "relevant_document_ids": [
+        "storage",
+        "support"
+      ],
+      "reference_answer": "Em SQLite no arquivo data/documents.sqlite3; suporte@example.com.",
+      "document_id": null,
+      "status": "answered",
+      "answer": "Os dados ficam salvos em um arquivo SQLite localizado em data/documents.sqlite3. Para falar com o suporte use o e‑mail suporte@example.com.",
+      "sources": [
+        {
+          "source_id": "S3",
+          "document_id": "6d55e7e38f0b82b087d80887ca01551f8cd5c42affda33615929768b5f6a34cf",
+          "filename": "armazenamento.txt",
+          "chunk_index": 0,
+          "text": "No projeto fictício Atlas, documentos e trechos ficam em SQLite no arquivo data/documents.sqlite3. Reiniciar a API preserva os registros, desde que esse arquivo seja mantido.",
+          "score": 0.8416845098544194
+        },
+        {
+          "source_id": "S1",
+          "document_id": "c7dd0c977e1c197a3d63b814bb4b17262de7ccb8dc99b2ab465bac6758b3cf42",
+          "filename": "suporte.txt",
+          "chunk_index": 0,
+          "text": "O suporte do projeto fictício Atlas atende de segunda a sexta-feira, das 9h às 17h, pelo e-mail suporte@example.com. Aos sábados e domingos não há atendimento. A primeira resposta leva até dois dias úteis.",
+          "score": 0.8476046480355134
+        }
+      ],
+      "cited_document_ids": [
+        "storage",
+        "support"
+      ],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 592.85
+    },
+    {
+      "id": "a09",
+      "query": "Qual é o preço mensal do plano profissional?",
+      "expected_status": "insufficient_context",
+      "relevant_document_ids": [],
+      "reference_answer": "Os documentos não informam preços.",
+      "document_id": null,
+      "status": "insufficient_context",
+      "answer": "Não encontrei informações suficientes nos documentos para responder.",
+      "sources": [],
+      "cited_document_ids": [],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 530.09
+    },
+    {
+      "id": "a10",
+      "query": "Qual é o número de telefone do suporte?",
+      "expected_status": "insufficient_context",
+      "relevant_document_ids": [],
+      "reference_answer": "Os documentos não informam telefone.",
+      "document_id": null,
+      "status": "insufficient_context",
+      "answer": "Não encontrei informações suficientes nos documentos para responder.",
+      "sources": [],
+      "cited_document_ids": [],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 539.79
+    },
+    {
+      "id": "a11",
+      "query": "Em qual provedor de nuvem o Atlas está hospedado?",
+      "expected_status": "insufficient_context",
+      "relevant_document_ids": [],
+      "reference_answer": "Os documentos não informam o provedor de hospedagem.",
+      "document_id": null,
+      "status": "insufficient_context",
+      "answer": "Não encontrei informações suficientes nos documentos para responder.",
+      "sources": [],
+      "cited_document_ids": [],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 568.65
+    },
+    {
+      "id": "a12",
+      "query": "Em que dia, mês e ano o Atlas foi lançado?",
+      "expected_status": "insufficient_context",
+      "relevant_document_ids": [],
+      "reference_answer": "Os documentos não informam a data de lançamento.",
+      "document_id": null,
+      "status": "insufficient_context",
+      "answer": "Não encontrei informações suficientes nos documentos para responder.",
+      "sources": [],
+      "cited_document_ids": [],
+      "error": null,
+      "human_review": {
+        "correct": null,
+        "supported_by_sources": null,
+        "complete": null,
+        "notes": ""
+      },
+      "latency_ms": 624.04
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+      - name: Build CPU image
+        run: docker build -t ai-knowledge-assistant:ci .
+      - name: Run tests in the image without network access
+        run: >-
+          docker run --rm --network none
+          --mount type=bind,source="${PWD}/tests",target=/app/tests,readonly
+          --mount type=bind,source="${PWD}/scripts",target=/app/scripts,readonly
+          ai-knowledge-assistant:ci python -m pytest -q -p no:cacheprovider tests
+      - name: Check startup and HTTP contract
+        run: |
+          docker run -d --name api-test -p 127.0.0.1:8000:8000 ai-knowledge-assistant:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/health; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8000/openapi.json > /tmp/openapi.json
+          python -c 'import json; d=json.load(open("/tmp/openapi.json")); assert d["info"]["version"] == "1.0.0"; assert "/ask" in d["paths"]'
+          test "$(docker exec api-test id -u)" = "10001"
+          docker exec api-test python -c 'from pathlib import Path; assert not Path("/app/.groq-key").exists(); assert not Path("/app/.git").exists()'
+      - name: Container logs and cleanup
+        if: always()
+        run: |
+          docker logs api-test || true
+          docker rm -f api-test || true

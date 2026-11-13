@@ -1,6 +1,8 @@
 # AI Knowledge Assistant
 
-> **Status: em desenvolvimento.** API para ingestão, armazenamento, busca semântica e perguntas sobre documentos. O endpoint `/ask` integra um LLM remoto via Groq e retorna as fontes citadas. Há uma avaliação inicial da recuperação com dados sintéticos; a fidelidade das respostas geradas ainda precisa ser avaliada.
+> **v1 funcional para demonstração local.** API de ingestão, persistência, busca semântica e perguntas com fontes. Inclui Docker, CI, logs e avaliações sintéticas. Uma execução real obteve 11/12 status corretos, incluindo 4/4 recusas adequadas; a recusa indevida e a análise das fontes estão documentadas. Não há alegação de fidelidade validada em produção.
+
+[Demo](docs/DEMO.md) · [Avaliação de respostas](evals/ANSWERS.md) · [Notas da v1](docs/releases/v1.0.0.md)
 
 ## Objetivo
 
@@ -74,24 +76,17 @@ Na busca, a API valida a consulta, lê os trechos selecionados e subdivide em me
 
 O modelo é reutilizado dentro do processo. O primeiro upload de um documento novo também pode carregar e baixar o modelo, pois usa seu tokenizer. Os embeddings dos documentos ainda são recalculados a cada busca.
 
-## Roadmap
+## Escopo da v1
 
-- [x] API inicial com endpoint de saúde
-- [x] Ingestão e segmentação de documentos
-- [x] Persistência em SQLite e consulta por identificador
-- [x] Embeddings locais com validação de entradas
-- [x] Segmentação conforme o limite de tokens e compatibilidade com documentos antigos
-- [x] Recuperação semântica com pontuação e fontes
-- [x] Endpoint HTTP de busca semântica
-- [x] Demonstração com modelo real
-- [x] Testes automatizados e workflow no GitHub Actions
-- [x] Avaliação inicial da recuperação com conjunto sintético
-- [ ] Ampliar a avaliação com conjunto independente e perguntas sem resposta
-- [ ] Persistência de embeddings e indexação vetorial
-- [x] Endpoint de perguntas com respostas geradas e fontes
-- [ ] Avaliação de fidelidade das respostas
-- [ ] Observabilidade de latência, erros e custos
-- [ ] Docker e demonstração da aplicação completa
+- [x] Upload TXT, segmentação por tokens e persistência SQLite
+- [x] Busca semântica e perguntas com fontes via Groq
+- [x] Recusa por contexto insuficiente e tratamento de erros
+- [x] Testes e integração contínua
+- [x] Avaliações sintéticas de recuperação e respostas
+- [x] Logs de requisições, latência e status
+- [x] Docker e roteiro de demonstração completa
+
+A primeira execução real e a análise assistida estão em [evals/ANSWERS_BASELINE.md](evals/ANSWERS_BASELINE.md). Uma avaliação humana independente permanece como evolução da validação. Persistência dos vetores, índice vetorial, avaliação independente, medição de custos e implantação pública ficam para evoluções futuras.
 
 ## Requisitos
 
@@ -131,7 +126,7 @@ Os comandos utilizam diretamente o Python do ambiente virtual, sem exigir sua at
 ### Iniciar a API
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --no-access-log
 ```
 
 Acesse:
@@ -335,7 +330,7 @@ Crie uma chave na [GroqCloud](https://console.groq.com/keys). Na raiz do projeto
 git check-ignore .groq-key
 ```
 
-O arquivo local tem precedência sobre `GROQ_API_KEY`, para evitar o uso de uma variável antiga durante o desenvolvimento. Quando `.groq-key` não existe, a API lê essa variável de ambiente. Um arquivo existente mas vazio ou inválido causa erro de configuração, sem recorrer à variável.
+Sem `GROQ_API_KEY_FILE` configurado, o arquivo local tem precedência sobre `GROQ_API_KEY`, para evitar o uso de uma variável antiga durante o desenvolvimento. Quando `.groq-key` não existe, a API lê essa variável de ambiente. Um arquivo existente mas vazio ou inválido causa erro de configuração, sem recorrer à variável.
 
 A chave é carregada somente quando há contexto para gerar uma resposta. `/health`, `/documents` e `/search` não dependem da Groq. Não envie a chave no corpo das requisições.
 
@@ -347,7 +342,7 @@ Para verificar a conexão usando o arquivo local:
 
 ### Testar no Swagger
 
-1. Inicie a API com `python -m uvicorn app.main:app --reload` usando o Python do ambiente virtual.
+1. Inicie a API com `python -m uvicorn app.main:app --reload --no-access-log` usando o Python do ambiente virtual.
 2. Em `/docs`, envie um `.txt` por `POST /documents` e copie o `document_id` retornado.
 3. Em `POST /ask`, clique em `Try it out` e envie o JSON abaixo. Para filtrar, acrescente `document_id` com o identificador real do upload.
 
@@ -498,9 +493,53 @@ Esses resultados descrevem somente esse conjunto inicial.
 A metodologia, os erros de ordenação e as limitações estão em
 [evals/README.md](evals/README.md).
 
+## Docker
+
+Com Docker e Compose instalados, crie na raiz um arquivo `.groq-key` contendo somente a sua chave Groq, sem aspas. O arquivo é ignorado pelo Git e excluído do contexto de build.
+
+```powershell
+docker compose up --build -d
+```
+
+Abra `http://127.0.0.1:8000/docs`. O Compose publica a porta somente em `127.0.0.1`. A imagem usa Python 3.12 e PyTorch em CPU, executando com usuário sem privilégios. O primeiro uso de embeddings baixa o modelo; não é necessário baixar o LLM, que roda na Groq.
+
+O banco e o cache ficam nos volumes `documents` e `model_cache`:
+
+```powershell
+docker compose logs --tail 50 api
+docker compose down
+```
+
+`down` preserva os volumes. A opção `down -v` remove os dados e não deve ser usada para uma parada comum. Os volumes Docker são separados do banco `data/documents.sqlite3` da execução local.
+
+O secret é montado em `/run/secrets/groq_api_key` e selecionado por `GROQ_API_KEY_FILE`. A precedência é: caminho explícito, arquivo local `.groq-key` e, somente quando não existe arquivo local nem caminho explícito, variável `GROQ_API_KEY`. Um arquivo explicitamente configurado que esteja ausente ou inválido gera erro, sem usar outra credencial silenciosamente.
+
+## Avaliar e demonstrar as respostas
+
+Na raiz, usando o mesmo ambiente Python e a chave já configurada:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.demo_rag
+.\.venv\Scripts\python.exe -m scripts.evaluate_answers
+```
+
+A demo mostra dois casos; a avaliação executa 12 perguntas com modelos reais em banco temporário. O relatório inclui resposta, fontes, status, falhas, latência, versões e campos de revisão humana. Os scripts utilizam a cota da Groq e não alteram seus documentos. Consulte a [metodologia](evals/ANSWERS.md) e o [roteiro da demo](docs/DEMO.md).
+
+## Resultado inicial das respostas
+
+Uma execução real no conjunto sintético `answers_pt_br_v1` apresentou **11/12 status corretos**, **7/8 perguntas respondíveis respondidas** e **4/4 recusas adequadas**, sem erros de execução. A latência p50 foi 568,65 ms e a p95 foi 1.033,48 ms, excluindo preparação e pausas.
+
+O caso sobre envio de PDF recebeu uma recusa indevida, apesar de o documento informar que o formato não é aceito. A análise assistida encontrou apoio nas fontes para as sete respostas geradas. O conjunto é pequeno, a árvore de trabalho da execução estava marcada como alterada e não houve avaliação humana independente. Veja [relatório, análise e limites](evals/ANSWERS_BASELINE.md).
+
+## Observabilidade
+
+As respostas recebem `X-Request-ID` e `X-Process-Time-Ms`. Os logs JSON incluem método, template da rota, status e duração até a criação da resposta. O middleware não registra corpo, query string, identificadores de documentos ou credenciais. Falhas não tratadas são registradas com status 500; as respostas 500 geradas fora do middleware podem não conter esses cabeçalhos.
+
+Execute o Uvicorn com `--no-access-log`, como no Docker, para evitar que o log padrão de acesso inclua URLs completas. A configuração do servidor e outros componentes podem produzir logs adicionais; não há promessa de filtragem global. Não há telemetria externa nem medição de custos.
+
 ## Limitações atuais
 
-- A geração via Groq ainda não tem avaliação própria de fidelidade ou de perguntas sem resposta.
+- A avaliação de respostas cobre 12 casos sintéticos em uma execução real: houve uma recusa indevida sobre PDF. A análise assistida das fontes não substitui avaliação humana independente nem comprova generalização.
 - A validação de referências confirma a existência da fonte no contexto, não a correção semântica da resposta.
 - A seleção por similaridade e o prompt não garantem proteção contra instruções maliciosas nos documentos.
 - O LLM remoto exige conexão, credenciais e disponibilidade dentro dos limites da conta. Perguntas e trechos selecionados são enviados à Groq.
