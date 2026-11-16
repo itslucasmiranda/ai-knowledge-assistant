@@ -565,6 +565,14 @@ Execute o Uvicorn com `--no-access-log`, como no Docker, para evitar que o log p
 - Desenvolver por branches, commits descritivos e pull requests.
 - Validar alterações com testes antes da integração.
 
+## Artigo técnico
+
+Documentei o processo de desenvolvimento do AI Knowledge Assistant, incluindo arquitetura RAG, embeddings, chunking, recuperação semântica, integração com LLMs, métricas de avaliação e análise de falhas.
+
+**[Construindo um RAG do zero com Python: da busca semântica à avaliação de respostas com LLMs](https://medium.com/@Wh01sDr/construindo-um-rag-do-zero-com-python-da-busca-sem%C3%A2ntica-%C3%A0-avalia%C3%A7%C3%A3o-de-respostas-com-llms-dacc35d3f0c2)**
+
+O artigo apresenta decisões de engenharia, resultados experimentais e limitações da versão v1.0.0.
+
 ## Autor
 
 [Lucas Miranda](https://github.com/itslucasmiranda)
